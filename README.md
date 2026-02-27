@@ -167,6 +167,8 @@ Once configured, your AI assistant can call any of the tools below. Try prompts 
 | `DATABRICKS_CATALOG` | No | `main` | Default catalog for unqualified table names |
 | `DATABRICKS_SCHEMA` | No | `default` | Default schema for unqualified table names |
 
+> **One workspace per server instance.** Each running MCP server connects to exactly one Databricks workspace (determined by `DATABRICKS_HOST` and its associated credentials). There is no way to switch workspaces at runtime. To work with multiple workspaces, register a separate MCP server entry per workspace in your IDE config — each with its own `.env` file or inline `env` block pointing to a different host/token pair.
+
 ## Infrastructure (Optional)
 
 If you need to provision a new Azure Databricks workspace, the `infra/` directory contains:
