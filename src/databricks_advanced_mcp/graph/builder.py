@@ -53,6 +53,7 @@ class GraphBuilder:
         self._graph.clear()
         self._scan_jobs(path_prefix=path_prefix)
         self._scan_pipelines(path_prefix=path_prefix)
+        self._scan_workspace_notebooks(path_prefix=path_prefix)
         return self._graph
 
     # ------------------------------------------------------------------
@@ -241,6 +242,72 @@ class GraphBuilder:
                         self._add_table_edges(nb_node, all_refs)
                 except Exception as e:
                     logger.warning("Failed to export notebook %s: %s", nb_path, e)
+
+    # ------------------------------------------------------------------
+    # Workspace notebook discovery
+    # ------------------------------------------------------------------
+
+    def _list_workspace_notebooks(
+        self, path_prefix: str = "", max_depth: int = 10
+    ) -> list[str]:
+        """List notebook paths in the workspace using iterative DFS.
+
+        Args:
+            path_prefix: Root path to list from. Defaults to ``/``.
+            max_depth: Maximum directory recursion depth.
+
+        Returns:
+            List of notebook paths found in the workspace.
+        """
+        from databricks.sdk.service.workspace import ObjectType
+
+        root = path_prefix or "/"
+        notebook_paths: list[str] = []
+        stack: list[tuple[str, int]] = [(root, 0)]
+
+        while stack:
+            current_path, depth = stack.pop()
+            try:
+                objects = list(self._client.workspace.list(current_path))
+            except Exception as exc:
+                logger.warning("Failed to list workspace path %s: %s", current_path, exc)
+                continue
+
+            for obj in objects:
+                obj_path = obj.path or ""
+                obj_type = obj.object_type
+
+                if obj_type == ObjectType.NOTEBOOK:
+                    notebook_paths.append(obj_path)
+                elif obj_type == ObjectType.DIRECTORY and depth < max_depth:
+                    stack.append((obj_path, depth + 1))
+
+        return notebook_paths
+
+    def _scan_workspace_notebooks(self, path_prefix: str = "") -> None:
+        """Discover and scan notebooks via workspace listing.
+
+        Lists notebooks under *path_prefix* (or ``/`` when empty), skips any
+        notebook that has already been added to the graph by job or pipeline
+        scans, and scans the remaining ones for table references.
+        """
+        notebook_paths = self._list_workspace_notebooks(path_prefix=path_prefix)
+
+        for nb_path in notebook_paths:
+            node_id = f"{NodeType.NOTEBOOK.value}::{nb_path}"
+            if self._graph.get_node(node_id):
+                # Already discovered via a job or pipeline scan — skip
+                continue
+
+            refs = self._scan_notebook_path(nb_path)
+
+            nb_node = Node(
+                node_type=NodeType.NOTEBOOK,
+                fqn=nb_path,
+                name=nb_path.split("/")[-1],
+            )
+            self._graph.add_node(nb_node)
+            self._add_table_edges(nb_node, refs)
 
     # ------------------------------------------------------------------
     # Notebook scanning
