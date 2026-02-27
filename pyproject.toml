@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "databricks-advanced-mcp"
+version = "0.0.1"
+description = "Advanced MCP server for Databricks workspace intelligence — dependency scanning, impact analysis, notebook review, and job/pipeline operations."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [
+    { name = "Henry Bravo" },
+]
+keywords = ["mcp", "databricks", "azure-databricks", "mcp-server", "fastmcp", "copilot", "claude"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "fastmcp>=2.0.0",
+    "databricks-sdk>=0.30.0",
+    "sqlglot>=25.0.0",
+    "networkx>=3.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/henrybravo/databricks-advanced-mcp-server"
+Repository = "https://github.com/henrybravo/databricks-advanced-mcp-server"
+Issues = "https://github.com/henrybravo/databricks-advanced-mcp-server/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.5.0",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+databricks-mcp = "databricks_advanced_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/databricks_advanced_mcp"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
