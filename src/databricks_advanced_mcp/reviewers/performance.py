@@ -87,6 +87,18 @@ _PERFORMANCE_RULES: list[dict[str, Any]] = [
         "cell_types": {"sql"},
     },
     {
+        "id": "PERF001",
+        "name": "SELECT * in PySpark SQL string",
+        "pattern": re.compile(
+            r"""(?:spark\.sql|sql)\(\s*(?:f?["']|f?\"\"\")\s*SELECT\s+\*\s+FROM\s""",
+            re.IGNORECASE,
+        ),
+        "severity": "high",
+        "message": "SELECT * without column pruning found in spark.sql() call. This reads all columns from the table.",
+        "suggestion": "Specify explicit column names instead of SELECT * for better performance and schema safety.",
+        "cell_types": {"python"},
+    },
+    {
         "id": "PERF002",
         "name": "collect() without limit",
         "pattern": re.compile(r"\.collect\(\s*\)"),

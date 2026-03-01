@@ -105,7 +105,16 @@ def register(mcp: FastMCP) -> None:
         settings = get_settings()
         cat = catalog or settings.databricks_catalog
         sch = schema or settings.databricks_schema
-        full_name = f"{cat}.{sch}.{table_name}"
+
+        # If the table_name is already fully qualified (catalog.schema.table), use it as-is
+        parts = table_name.split(".")
+        if len(parts) == 3:
+            full_name = table_name
+            cat = parts[0]
+        elif len(parts) == 2:
+            full_name = f"{cat}.{table_name}"
+        else:
+            full_name = f"{cat}.{sch}.{table_name}"
 
         try:
             table = client.tables.get(full_name)
@@ -148,6 +157,23 @@ def register(mcp: FastMCP) -> None:
                 catalog=cat,
                 schema=sch,
             )
+
+        # Fallback: surface row_count from table statistics properties
+        # when DESCRIBE DETAIL did not return a value.
+        if row_count is None and properties:
+            stats_rows = properties.get("spark.sql.statistics.numRows")
+            if stats_rows is not None:
+                try:
+                    row_count = int(stats_rows)
+                except (ValueError, TypeError):
+                    pass
+        if size_bytes is None and properties:
+            stats_size = properties.get("spark.sql.statistics.totalSize")
+            if stats_size is not None:
+                try:
+                    size_bytes = int(stats_size)
+                except (ValueError, TypeError):
+                    pass
 
         result: dict[str, Any] = {
             "full_name": table.full_name or full_name,

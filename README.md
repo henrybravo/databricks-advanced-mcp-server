@@ -62,11 +62,16 @@ cp .env.example .env
 Edit `.env` with your Databricks credentials:
 
 ```dotenv
+# Azure Databricks:
 DATABRICKS_HOST=https://adb-xxxx.azuredatabricks.net
+# Databricks on AWS / GCP:
+# DATABRICKS_HOST=https://dbc-xxxx.cloud.databricks.com
+
 DATABRICKS_TOKEN=dapi_your_token
 DATABRICKS_WAREHOUSE_ID=your_warehouse_id
 
 # Optional (defaults shown)
+# Azure workspaces typically use "main"; AWS/GCP workspaces use "workspace"
 DATABRICKS_CATALOG=main
 DATABRICKS_SCHEMA=default
 ```
@@ -161,13 +166,25 @@ Once configured, your AI assistant can call any of the tools below. Try prompts 
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `DATABRICKS_HOST` | Yes | — | Workspace URL (e.g., `https://adb-xxx.azuredatabricks.net`) |
+| `DATABRICKS_HOST` | Yes | — | Workspace URL (`https://adb-xxx.azuredatabricks.net` for Azure, `https://dbc-xxx.cloud.databricks.com` for AWS/GCP) |
 | `DATABRICKS_TOKEN` | Yes | — | Personal access token or service principal token |
 | `DATABRICKS_WAREHOUSE_ID` | Yes | — | SQL warehouse ID for query execution |
-| `DATABRICKS_CATALOG` | No | `main` | Default catalog for unqualified table names |
+| `DATABRICKS_CATALOG` | No | `main` | Default catalog for unqualified table names — use `workspace` for AWS/GCP |
 | `DATABRICKS_SCHEMA` | No | `default` | Default schema for unqualified table names |
 
 > **One workspace per server instance.** Each running MCP server connects to exactly one Databricks workspace (determined by `DATABRICKS_HOST` and its associated credentials). There is no way to switch workspaces at runtime. To work with multiple workspaces, register a separate MCP server entry per workspace in your IDE config — each with its own `.env` file or inline `env` block pointing to a different host/token pair.
+
+### Cloud Provider Notes
+
+This server is tested against **Azure Databricks** and **Databricks on AWS** (`.cloud.databricks.com`). Key differences:
+
+| Aspect | Azure | AWS / GCP |
+|---|---|---|
+| Host format | `https://adb-xxx.azuredatabricks.net` | `https://dbc-xxx.cloud.databricks.com` |
+| Default catalog | `main` | `workspace` |
+| Workspace root objects | `DIRECTORY` | `DIRECTORY` and `REPO` |
+
+All tools work on both platforms. Set `DATABRICKS_CATALOG` to match your workspace's default catalog.
 
 ## Infrastructure (Optional)
 
