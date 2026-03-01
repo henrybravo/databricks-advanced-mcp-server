@@ -19,15 +19,13 @@ An advanced [Model Context Protocol (MCP)](https://modelcontextprotocol.io) serv
 
 ## Demo
 
-[![Demo teaser — click to watch full video](demo-teaser.gif)](demo.mp4)
+[![Demo teaser — click to watch full video](demo-teaser.gif)](https://github.com/user-attachments/assets/579282ca-bb26-4244-b0c6-3ad26050aca3)
 
 <details>
 
 <summary>Click to play full video</summary>
 
-<video src="demo.mp4" controls width="100%">
-  <a href="demo.mp4">Watch the full demo walkthrough</a>
-</video>
+https://github.com/user-attachments/assets/579282ca-bb26-4244-b0c6-3ad26050aca3
 
 </details>
 
