@@ -325,11 +325,12 @@ src/databricks_advanced_mcp/
 ├── client.py          # Databricks SDK client factory
 ├── tools/             # MCP tool implementations
 │   ├── sql_executor.py
-│   ├── table_info.py
 │   ├── dependency_scanner.py
 │   ├── impact_analysis.py
 │   ├── notebook_reviewer.py
-│   └── job_pipeline_ops.py
+│   ├── job_pipeline_ops.py
+|   ├── table_info.py
+|   └── workspace_listing.py
 ├── parsers/           # Code parsing engines
 │   ├── sql_parser.py       # sqlglot-based SQL extraction
 │   ├── notebook_parser.py  # Databricks notebook cell parsing
