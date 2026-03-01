@@ -218,7 +218,7 @@ Alternatively, with a source install you can use separate `.env` files per works
 
 ### 4. Start using
 
-Once configured, your AI assistant can call any of the 17 tools below. Here are example prompts organized by domain:
+Once configured, your AI assistant can call any of the 18 tools below. Here are example prompts organized by domain:
 
 **Explore your data**
 - *"What tables exist in the `analytics` schema?"*
@@ -254,6 +254,7 @@ Once configured, your AI assistant can call any of the 17 tools below. Here are 
 | `scan_notebook` | Scan a notebook for table/column references |
 | `scan_jobs` | Scan all jobs for table dependencies |
 | `scan_dlt_pipelines` | Scan all DLT pipelines for source/target tables |
+| `scan_dlt_pipeline` | Scan a single DLT pipeline by ID for source/target tables |
 | `build_dependency_graph` | Build the full workspace dependency graph |
 | `get_table_dependencies` | Get upstream/downstream dependencies for a table |
 | `refresh_graph` | Invalidate and rebuild the dependency graph cache |
@@ -264,6 +265,7 @@ Once configured, your AI assistant can call any of the 17 tools below. Here are 
 | `list_pipelines` | List DLT pipelines with state and update status |
 | `get_pipeline_status` | Get pipeline update details with event log |
 | `trigger_rerun` | Trigger a job rerun (requires confirmation) |
+| `list_workspace_notebooks` | List all notebooks in a workspace path |
 
 ## Configuration Reference
 
