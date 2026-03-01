@@ -17,6 +17,11 @@ from databricks_advanced_mcp.client import get_workspace_client
 
 logger = logging.getLogger(__name__)
 
+# Object types that should be recursed into (Databricks Cloud may
+# report top-level folders like /Shared and /Repos as REPO or FILE
+# rather than DIRECTORY).
+_CONTAINER_TYPES = {ObjectType.DIRECTORY, ObjectType.REPO}
+
 
 def _list_notebooks_iterative(
     client: Any,
@@ -60,7 +65,7 @@ def _list_notebooks_iterative(
                     "name": obj_path.rsplit("/", 1)[-1] if obj_path else "",
                     "language": language,
                 })
-            elif obj_type == ObjectType.DIRECTORY and depth < max_depth:
+            elif obj_type in _CONTAINER_TYPES and depth < max_depth:
                 stack.append((obj_path, depth + 1))
 
     return notebooks
@@ -111,7 +116,7 @@ def register(mcp: FastMCP) -> None:
                     "name": obj_path.rsplit("/", 1)[-1] if obj_path else "",
                     "language": language,
                 })
-            elif obj_type == ObjectType.DIRECTORY and max_depth > 0:
+            elif obj_type in _CONTAINER_TYPES and max_depth > 0:
                 stack.append((obj_path, 1))
 
         # Continue DFS for subdirectories
@@ -139,7 +144,7 @@ def register(mcp: FastMCP) -> None:
                         "name": obj_path.rsplit("/", 1)[-1] if obj_path else "",
                         "language": language,
                     })
-                elif obj_type == ObjectType.DIRECTORY and depth < max_depth:
+                elif obj_type in _CONTAINER_TYPES and depth < max_depth:
                     stack.append((obj_path, depth + 1))
 
         return json.dumps({

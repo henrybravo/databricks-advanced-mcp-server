@@ -140,16 +140,33 @@ def register(mcp: FastMCP) -> None:
         """
         client = get_workspace_client()
 
+        # Always fetch job definition for metadata
+        job_meta: dict[str, Any] = {"job_id": job_id}
+        try:
+            job_detail = client.jobs.get(int(job_id))
+            if job_detail.settings:
+                job_meta["name"] = job_detail.settings.name
+                if job_detail.settings.schedule:
+                    job_meta["schedule"] = {
+                        "cron": job_detail.settings.schedule.quartz_cron_expression,
+                        "timezone": job_detail.settings.schedule.timezone_id,
+                    }
+                defined_tasks = job_detail.settings.tasks or []
+                job_meta["defined_task_count"] = len(defined_tasks)
+                job_meta["defined_tasks"] = [
+                    t.task_key for t in defined_tasks
+                ]
+        except Exception:
+            pass  # Non-fatal — proceed with run info
+
         try:
             runs = list(client.jobs.list_runs(job_id=int(job_id), limit=1))
         except Exception as e:
             return json.dumps({"error": f"Failed to get runs for job {job_id}: {e}"})
 
         if not runs:
-            return json.dumps({
-                "job_id": job_id,
-                "message": "No runs found for this job.",
-            })
+            job_meta["message"] = "No runs found for this job."
+            return json.dumps(job_meta, indent=2)
 
         run = runs[0]
         run_state = run.state
@@ -162,24 +179,49 @@ def register(mcp: FastMCP) -> None:
                 "state_message": run_state.state_message,
             }
 
-        # Task-level details
+        # Task-level details — extract from the run object
         tasks_info: list[dict[str, Any]] = []
-        if run.tasks:
-            for task in run.tasks:
-                task_state = task.state
-                task_info: dict[str, Any] = {
-                    "task_key": task.task_key,
-                }
-                if task_state:
-                    task_info["life_cycle_state"] = str(task_state.life_cycle_state) if task_state.life_cycle_state else None
-                    task_info["result_state"] = str(task_state.result_state) if task_state.result_state else None
+        run_tasks = run.tasks or []
 
-                    # Diagnose errors
-                    if task_state.state_message and task_state.result_state and "FAILED" in str(task_state.result_state):
-                        task_info["error_message"] = task_state.state_message
-                        task_info["diagnosis"] = _diagnose_error(task_state.state_message)
+        # If run.tasks is empty, try fetching the full run object
+        if not run_tasks and run.run_id:
+            try:
+                full_run = client.jobs.get_run(run.run_id)
+                run_tasks = full_run.tasks or []
+            except Exception:
+                pass
 
-                tasks_info.append(task_info)
+        for task in run_tasks:
+            task_state = task.state
+            task_info: dict[str, Any] = {
+                "task_key": task.task_key,
+            }
+            if task_state:
+                task_info["life_cycle_state"] = str(task_state.life_cycle_state) if task_state.life_cycle_state else None
+                task_info["result_state"] = str(task_state.result_state) if task_state.result_state else None
+
+                # Diagnose errors
+                if task_state.state_message and task_state.result_state and "FAILED" in str(task_state.result_state):
+                    task_info["error_message"] = task_state.state_message
+
+                    # Try to fetch the detailed run output for this task
+                    task_run_id = getattr(task, "run_id", None)
+                    if task_run_id:
+                        try:
+                            output = client.jobs.get_run_output(task_run_id)
+                            if output.error:
+                                task_info["error_detail"] = output.error
+                            if output.error_trace:
+                                # Truncate trace to first 2000 chars
+                                task_info["error_trace"] = output.error_trace[:2000]
+                        except Exception:
+                            pass
+
+                    task_info["diagnosis"] = _diagnose_error(
+                        task_info.get("error_detail") or task_info.get("error_message", "")
+                    )
+
+            tasks_info.append(task_info)
 
         # Duration
         duration_ms = None
@@ -187,7 +229,7 @@ def register(mcp: FastMCP) -> None:
             duration_ms = run.end_time - run.start_time
 
         result: dict[str, Any] = {
-            "job_id": job_id,
+            **job_meta,
             "run_id": str(run.run_id),
             "state": state_info,
             "duration_ms": duration_ms,
@@ -198,8 +240,18 @@ def register(mcp: FastMCP) -> None:
         }
 
         # Top-level diagnosis if the run failed
-        if run_state and run_state.state_message and run_state.result_state and "FAILED" in str(run_state.result_state):
-            result["diagnosis"] = _diagnose_error(run_state.state_message)
+        error_source = ""
+        if tasks_info:
+            # Use the first failed task's detailed error for diagnosis
+            for ti in tasks_info:
+                if ti.get("error_detail") or ti.get("error_message"):
+                    error_source = ti.get("error_detail") or ti.get("error_message", "")
+                    break
+        if not error_source and run_state and run_state.state_message:
+            error_source = run_state.state_message
+
+        if error_source and run_state and run_state.result_state and "FAILED" in str(run_state.result_state):
+            result["diagnosis"] = _diagnose_error(error_source)
 
         return json.dumps(result, indent=2)
 

@@ -30,7 +30,21 @@ An advanced [Model Context Protocol (MCP)](https://modelcontextprotocol.io) serv
 >
 > **Don't have a Databricks workspace yet?** See [`infra/INSTALL.md`](infra/INSTALL.md) for a one-command Azure deployment using Bicep.
 
-### 1. Clone and install
+### 1. Install
+
+#### Option A: Install from PyPI (recommended)
+
+```bash
+uv pip install databricks-advanced-mcp
+```
+
+Or with pip:
+
+```bash
+pip install databricks-advanced-mcp
+```
+
+#### Option B: Install from source
 
 ```bash
 git clone https://github.com/henrybravo/databricks-advanced-mcp-server.git
@@ -62,11 +76,16 @@ cp .env.example .env
 Edit `.env` with your Databricks credentials:
 
 ```dotenv
+# Azure Databricks:
 DATABRICKS_HOST=https://adb-xxxx.azuredatabricks.net
+# Databricks on AWS / GCP:
+# DATABRICKS_HOST=https://dbc-xxxx.cloud.databricks.com
+
 DATABRICKS_TOKEN=dapi_your_token
 DATABRICKS_WAREHOUSE_ID=your_warehouse_id
 
 # Optional (defaults shown)
+# Azure workspaces typically use "main"; AWS/GCP workspaces use "workspace"
 DATABRICKS_CATALOG=main
 DATABRICKS_SCHEMA=default
 ```
@@ -75,9 +94,29 @@ DATABRICKS_SCHEMA=default
 
 Create `.vscode/mcp.json` in your project to register the MCP server with VS Code / GitHub Copilot.
 
-#### Option A: Virtual environment activated (recommended)
+#### Option A: PyPI install (recommended)
 
-If you installed into a local `.venv` (as shown above), point directly to the Python interpreter. This is the most reliable approach - it doesn't require the `databricks-mcp` command to be on your system PATH.
+If you installed from PyPI (`pip install databricks-advanced-mcp`), the `databricks-mcp` CLI is available on your PATH:
+
+```jsonc
+{
+  "servers": {
+    "databricks-mcp": {
+      "type": "stdio",
+      "command": "databricks-mcp",
+      "env": {
+        "DATABRICKS_HOST": "https://adb-xxxx.azuredatabricks.net",
+        "DATABRICKS_TOKEN": "dapi_your_token",
+        "DATABRICKS_WAREHOUSE_ID": "your_warehouse_id"
+      }
+    }
+  }
+}
+```
+
+#### Option B: Virtual environment (source install)
+
+If you cloned the repo and installed into a local `.venv`, point directly to the Python interpreter:
 
 **Windows**
 ```jsonc
@@ -107,21 +146,55 @@ If you installed into a local `.venv` (as shown above), point directly to the Py
 }
 ```
 
-#### Option B: Global / PATH install
+#### Multiple Workspaces
 
-If you installed the package globally (e.g., `uv pip install .` without a venv, or via `pipx`), the `databricks-mcp` CLI command is available on your PATH. In this case you can use the simpler config - but you must pass env vars inline since there's no `envFile` relative to the project:
+Each MCP server instance connects to exactly one Databricks workspace. To work with multiple workspaces simultaneously, register a separate server entry per workspace — each with its own credentials:
 
 ```jsonc
 {
   "servers": {
-    "databricks-mcp": {
+    // AWS / GCP workspace
+    "databricks-cloud": {
+      "type": "stdio",
+      "command": "databricks-mcp",
+      "env": {
+        "DATABRICKS_HOST": "https://dbc-xxxx.cloud.databricks.com",
+        "DATABRICKS_TOKEN": "dapi_cloud_token",
+        "DATABRICKS_WAREHOUSE_ID": "cloud_warehouse_id",
+        "DATABRICKS_CATALOG": "workspace"
+      }
+    },
+    // Azure workspace
+    "databricks-azure": {
       "type": "stdio",
       "command": "databricks-mcp",
       "env": {
         "DATABRICKS_HOST": "https://adb-xxxx.azuredatabricks.net",
-        "DATABRICKS_TOKEN": "dapi_your_token",
-        "DATABRICKS_WAREHOUSE_ID": "your_warehouse_id"
+        "DATABRICKS_TOKEN": "dapi_azure_token",
+        "DATABRICKS_WAREHOUSE_ID": "azure_warehouse_id",
+        "DATABRICKS_CATALOG": "main"
       }
+    }
+  }
+}
+```
+
+Alternatively, with a source install you can use separate `.env` files per workspace:
+
+```jsonc
+{
+  "servers": {
+    "databricks-cloud": {
+      "type": "stdio",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "databricks_advanced_mcp.server"],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    "databricks-azure": {
+      "type": "stdio",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "databricks_advanced_mcp.server"],
+      "envFile": "${workspaceFolder}/.env_azure"
     }
   }
 }
@@ -161,13 +234,23 @@ Once configured, your AI assistant can call any of the tools below. Try prompts 
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `DATABRICKS_HOST` | Yes | — | Workspace URL (e.g., `https://adb-xxx.azuredatabricks.net`) |
+| `DATABRICKS_HOST` | Yes | — | Workspace URL (`https://adb-xxx.azuredatabricks.net` for Azure, `https://dbc-xxx.cloud.databricks.com` for AWS/GCP) |
 | `DATABRICKS_TOKEN` | Yes | — | Personal access token or service principal token |
 | `DATABRICKS_WAREHOUSE_ID` | Yes | — | SQL warehouse ID for query execution |
-| `DATABRICKS_CATALOG` | No | `main` | Default catalog for unqualified table names |
+| `DATABRICKS_CATALOG` | No | `main` | Default catalog for unqualified table names — use `workspace` for AWS/GCP |
 | `DATABRICKS_SCHEMA` | No | `default` | Default schema for unqualified table names |
 
-> **One workspace per server instance.** Each running MCP server connects to exactly one Databricks workspace (determined by `DATABRICKS_HOST` and its associated credentials). There is no way to switch workspaces at runtime. To work with multiple workspaces, register a separate MCP server entry per workspace in your IDE config — each with its own `.env` file or inline `env` block pointing to a different host/token pair.
+### Cloud Provider Notes
+
+This server is tested against **Azure Databricks** and **Databricks on AWS** (`.cloud.databricks.com`). Key differences:
+
+| Aspect | Azure | AWS / GCP |
+|---|---|---|
+| Host format | `https://adb-xxx.azuredatabricks.net` | `https://dbc-xxx.cloud.databricks.com` |
+| Default catalog | `main` | `workspace` |
+| Workspace root objects | `DIRECTORY` | `DIRECTORY` and `REPO` |
+
+All tools work on both platforms. Set `DATABRICKS_CATALOG` to match your workspace's default catalog.
 
 ## Infrastructure (Optional)
 

@@ -95,24 +95,34 @@ def register(mcp: FastMCP) -> None:
         results: list[dict[str, Any]] = []
         for job in jobs:
             job_id = str(job.job_id)
-            job_name = job.settings.name if job.settings else f"job_{job_id}"
+
+            # Fetch full job details — list() may omit task definitions
+            settings = job.settings
+            try:
+                job_detail = client.jobs.get(int(job_id))
+                if job_detail.settings:
+                    settings = job_detail.settings
+            except Exception:
+                pass  # Fall back to list() data
+
+            job_name = settings.name if settings else f"job_{job_id}"
 
             tasks_info: list[dict[str, Any]] = []
-            if job.settings and job.settings.tasks:
-                for task in job.settings.tasks:
-                    task_info: dict[str, Any] = {
-                        "task_key": task.task_key,
-                        "type": "unknown",
-                    }
-                    if task.notebook_task:
-                        task_info["type"] = "notebook"
-                        task_info["notebook_path"] = task.notebook_task.notebook_path
-                    elif task.sql_task:
-                        task_info["type"] = "sql"
-                    elif task.pipeline_task:
-                        task_info["type"] = "pipeline"
-                        task_info["pipeline_id"] = task.pipeline_task.pipeline_id
-                    tasks_info.append(task_info)
+            raw_tasks = (settings.tasks if settings else None) or []
+            for task in raw_tasks:
+                task_info: dict[str, Any] = {
+                    "task_key": task.task_key,
+                    "type": "unknown",
+                }
+                if task.notebook_task:
+                    task_info["type"] = "notebook"
+                    task_info["notebook_path"] = task.notebook_task.notebook_path
+                elif task.sql_task:
+                    task_info["type"] = "sql"
+                elif task.pipeline_task:
+                    task_info["type"] = "pipeline"
+                    task_info["pipeline_id"] = task.pipeline_task.pipeline_id
+                tasks_info.append(task_info)
 
             results.append({
                 "job_id": job_id,

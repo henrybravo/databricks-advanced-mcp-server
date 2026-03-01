@@ -70,7 +70,17 @@ class GraphBuilder:
 
         for job in jobs:
             job_id = str(job.job_id)
-            job_name = job.settings.name if job.settings else f"job_{job_id}"
+
+            # Fetch full job details — list() may omit task definitions
+            settings = job.settings
+            try:
+                job_detail = self._client.jobs.get(int(job_id))
+                if job_detail.settings:
+                    settings = job_detail.settings
+            except Exception:
+                pass  # Fall back to list() data
+
+            job_name = settings.name if settings else f"job_{job_id}"
 
             job_node = Node(
                 node_type=NodeType.JOB,
@@ -80,10 +90,11 @@ class GraphBuilder:
             )
             self._graph.add_node(job_node)
 
-            if not job.settings or not job.settings.tasks:
+            raw_tasks = (settings.tasks if settings else None) or []
+            if not raw_tasks:
                 continue
 
-            for task in job.settings.tasks:
+            for task in raw_tasks:
                 self._process_job_task(job_node, task, path_prefix=path_prefix)
 
     def _process_job_task(self, job_node: Node, task: Any, path_prefix: str = "") -> None:
@@ -261,6 +272,10 @@ class GraphBuilder:
         """
         from databricks.sdk.service.workspace import ObjectType
 
+        # Object types to recurse into (Databricks Cloud may use REPO
+        # for top-level folders like /Shared and /Repos).
+        _CONTAINER_TYPES = {ObjectType.DIRECTORY, ObjectType.REPO}
+
         root = path_prefix or "/"
         notebook_paths: list[str] = []
         stack: list[tuple[str, int]] = [(root, 0)]
@@ -279,7 +294,7 @@ class GraphBuilder:
 
                 if obj_type == ObjectType.NOTEBOOK:
                     notebook_paths.append(obj_path)
-                elif obj_type == ObjectType.DIRECTORY and depth < max_depth:
+                elif obj_type in _CONTAINER_TYPES and depth < max_depth:
                     stack.append((obj_path, depth + 1))
 
         return notebook_paths
