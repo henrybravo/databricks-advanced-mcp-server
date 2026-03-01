@@ -17,6 +17,22 @@ An advanced [Model Context Protocol (MCP)](https://modelcontextprotocol.io) serv
 | **Notebook Review** | Detect performance anti-patterns, coding standard violations, and suggest optimizations |
 | **Job & Pipeline Ops** | List jobs/pipelines, get run status with error diagnostics, trigger reruns |
 
+## Demo
+
+[![Demo teaser — click to watch full video](demo-teaser.gif)](demo.mp4)
+
+<details>
+
+<summary>Click to play full video</summary>
+
+<video src="demo.mp4" controls width="100%">
+  <a href="demo.mp4">Watch the full demo walkthrough</a>
+</video>
+
+</details>
+
+> Covers SQL execution, dependency scanning, impact analysis, notebook review, and job/pipeline operations.
+
 ## Quick Start
 
 ### Prerequisites
@@ -202,12 +218,31 @@ Alternatively, with a source install you can use separate `.env` files per works
 
 ### 4. Start using
 
-Once configured, your AI assistant can call any of the tools below. Try prompts like:
+Once configured, your AI assistant can call any of the 17 tools below. Here are example prompts organized by domain:
 
-- *"List all tables in the `analytics` schema"*
-- *"Review the notebook at `/Users/me/etl_pipeline` for performance issues"*
-- *"What would break if I drop the `customer_id` column from `main.sales.orders`?"*
-- *"Show me the status of job 12345"*
+**Explore your data**
+- *"What tables exist in the `analytics` schema?"*
+- *"Show me the schema and metadata for `main.sales.orders`"*
+- *"Run a query that counts and sums orders by status from `main.sales.orders`"*
+
+**Understand dependencies**
+- *"Build the full workspace dependency graph"*
+- *"What are the upstream and downstream dependencies of `main.default.customers`?"*
+- *"Scan the `/Shared/mandated_broker_v2_etl_pipeline` notebook for table references"*
+- *"Scan all jobs and show their table dependencies"*
+
+**Assess impact before making changes**
+- *"What would break if I drop the `customer_id` column from `main.default.customers`?"*
+- *"What's the impact of removing the `amount` column and renaming `status` to `order_status` in `main.sales.orders`?"*
+
+**Review notebook quality**
+- *"Review `/Shared/mandated_broker_v2_etl_pipeline` for performance issues"*
+- *"Review `/Shared/analysis` for all issues — performance, coding standards, and optimizations"*
+
+**Monitor jobs and pipelines**
+- *"List all jobs in the workspace"*
+- *"What's the current status of job 12345?"*
+- *"Show me the pipeline status for my DLT pipeline"*
 
 ## MCP Tools
 
