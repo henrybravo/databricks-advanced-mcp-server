@@ -22,6 +22,7 @@ def register_all_tools(mcp: FastMCP) -> None:
         sql_executor,
         table_info,
         workspace_listing,
+        workspace_ops,
     )
 
     sql_executor.register(mcp)
@@ -31,3 +32,4 @@ def register_all_tools(mcp: FastMCP) -> None:
     notebook_reviewer.register(mcp)
     job_pipeline_ops.register(mcp)
     workspace_listing.register(mcp)
+    workspace_ops.register(mcp)
