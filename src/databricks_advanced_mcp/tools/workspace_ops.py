@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 from typing import Any
 
 from fastmcp import FastMCP
@@ -25,6 +26,143 @@ _NOTEBOOK_EXTENSIONS: dict[str, tuple[str, str]] = {
     ".r": ("SOURCE", "R"),
     ".ipynb": ("JUPYTER", "PYTHON"),
 }
+
+
+# ── Databricks SOURCE → ipynb conversion helpers ──────────────────
+
+# Regex matching the Databricks cell separator for all languages
+_CELL_SEPARATOR = re.compile(r"#\s*COMMAND\s*-{5,}|--\s*COMMAND\s*-{5,}")
+
+# Regex for magic commands at the start of a cell (e.g. %sql, %md, %python)
+_MAGIC_CMD = re.compile(r"^\s*%(\w+)\s*(.*)", re.DOTALL)
+
+# Header lines emitted by Databricks SOURCE export
+_HEADER_PATTERN = re.compile(
+    r"^\s*(?:#|--)?\s*Databricks notebook source\s*$", re.IGNORECASE
+)
+
+# Language → Jupyter kernel metadata
+_KERNEL_META: dict[str, dict[str, str]] = {
+    "python": {"display_name": "Python 3", "language": "python", "name": "python3"},
+    "sql": {"display_name": "SQL", "language": "sql", "name": "sql"},
+    "scala": {"display_name": "Scala", "language": "scala", "name": "scala"},
+    "r": {"display_name": "R", "language": "R", "name": "ir"},
+}
+
+
+def _detect_notebook_language(client: Any, notebook_path: str) -> str:
+    """Best-effort detection of a notebook's default language via workspace API."""
+    try:
+        status = client.workspace.get_status(notebook_path)
+        if status.language:
+            return str(status.language).lower()
+    except Exception:
+        pass
+    return "python"
+
+
+def _source_to_ipynb(source: str, default_language: str = "python") -> str:
+    """Convert Databricks SOURCE export text to a .ipynb JSON string.
+
+    The conversion preserves all code and markdown cells. Execution outputs
+    are not available in the SOURCE format and are therefore omitted.
+
+    Args:
+        source: Raw Databricks SOURCE export content.
+        default_language: Default language of the notebook (python, sql, …).
+
+    Returns:
+        A JSON string representing a valid Jupyter .ipynb notebook.
+    """
+    default_language = default_language.lower()
+
+    # Split into raw cells on the Databricks separator
+    raw_cells = _CELL_SEPARATOR.split(source)
+
+    cells: list[dict[str, Any]] = []
+    for raw in raw_cells:
+        content = raw.strip()
+        if not content:
+            continue
+
+        # Strip the "Databricks notebook source" header line
+        content = _HEADER_PATTERN.sub("", content).strip()
+        if not content:
+            continue
+
+        cell_type, cell_lang, cell_source = _classify_source_cell(
+            content, default_language
+        )
+
+        # Build the Jupyter cell
+        if cell_type == "markdown":
+            cells.append({
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": _lines(cell_source),
+            })
+        else:
+            cells.append({
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {} if cell_lang == default_language else {"language": cell_lang},
+                "outputs": [],
+                "source": _lines(cell_source),
+            })
+
+    kernel = _KERNEL_META.get(default_language, _KERNEL_META["python"])
+
+    notebook: dict[str, Any] = {
+        "cells": cells,
+        "metadata": {
+            "kernelspec": kernel,
+            "language_info": {"name": default_language},
+        },
+        "nbformat": 4,
+        "nbformat_minor": 5,
+    }
+
+    return json.dumps(notebook, indent=1)
+
+
+def _classify_source_cell(
+    content: str, default_language: str
+) -> tuple[str, str, str]:
+    """Classify a raw cell and return (cell_type, language, cleaned_source).
+
+    Returns:
+        A tuple of ("code" | "markdown", language_name, source_text).
+    """
+    magic = _MAGIC_CMD.match(content)
+    if magic:
+        cmd = magic.group(1).lower()
+        body = magic.group(2).strip()
+        if cmd == "md":
+            return "markdown", "markdown", body
+        if cmd in {"sql", "python", "scala", "r"}:
+            return "code", cmd, body
+        # Other magics (%sh, %fs, %pip, %run) – keep as code
+        return "code", default_language, content
+
+    # Handle legacy MAGIC-prefixed markdown (Python notebooks)
+    if re.match(r"^#\s*MAGIC\s+%md", content, re.MULTILINE):
+        cleaned = re.sub(r"^#\s*MAGIC\s*%md\s*", "", content, flags=re.MULTILINE)
+        cleaned = re.sub(r"^#\s*MAGIC\s*", "", cleaned, flags=re.MULTILINE)
+        return "markdown", "markdown", cleaned.strip()
+
+    return "code", default_language, content
+
+
+def _lines(text: str) -> list[str]:
+    """Split text into Jupyter-style source lines (each ending with \n except the last)."""
+    parts = text.split("\n")
+    result: list[str] = []
+    for i, line in enumerate(parts):
+        if i < len(parts) - 1:
+            result.append(line + "\n")
+        else:
+            result.append(line)
+    return result
 
 
 def register(mcp: FastMCP) -> None:
@@ -287,26 +425,28 @@ def register(mcp: FastMCP) -> None:
     ) -> str:
         """Read/export the content of a Databricks notebook.
 
-        NOTE: The Databricks Workspace Export API only supports SOURCE and HTML
-        formats for notebook export. JUPYTER (.ipynb) is NOT a supported export
-        format, even though it is supported for import/upload. If a caller needs
-        a .ipynb file, it must be reconstructed from the SOURCE export — all code
-        will be intact, but prior execution outputs will not be available.
+        Supported formats:
+          - SOURCE (default): Raw source code with Databricks cell separators.
+          - HTML: Rendered HTML export.
+          - JUPYTER: Reconstructed .ipynb notebook. The Databricks API does not
+            natively export JUPYTER format, so the tool fetches SOURCE and
+            automatically converts it to a valid .ipynb JSON structure. Code is
+            fully preserved; prior execution outputs are not available.
 
         Args:
             notebook_path: Workspace path to the notebook
                            (e.g. "/Workspace/Users/me/my_notebook").
-            format: Export format — "SOURCE" (default) or "HTML".
-                    JUPYTER is not supported for export by the Databricks API.
+            format: Export format — "SOURCE" (default), "HTML", or "JUPYTER".
 
         Returns:
-            JSON with notebook content and metadata.
+            JSON with notebook content and metadata.  For JUPYTER format the
+            ``content`` field contains a complete .ipynb JSON string.
         """
         import base64 as b64
 
         from databricks.sdk.service.workspace import ExportFormat
 
-        valid_formats = {"SOURCE", "HTML"}
+        valid_formats = {"SOURCE", "HTML", "JUPYTER"}
         fmt_upper = format.upper()
         if fmt_upper not in valid_formats:
             return json.dumps({
@@ -315,10 +455,13 @@ def register(mcp: FastMCP) -> None:
 
         client = get_workspace_client()
 
+        # For JUPYTER we fetch SOURCE then reconstruct
+        api_format = "SOURCE" if fmt_upper == "JUPYTER" else fmt_upper
+
         try:
             export = client.workspace.export(
                 notebook_path,
-                format=ExportFormat[fmt_upper],
+                format=ExportFormat[api_format],
             )
         except Exception as e:
             return json.dumps({"error": f"Failed to export notebook: {e}"})
@@ -329,6 +472,17 @@ def register(mcp: FastMCP) -> None:
                 content = b64.b64decode(content).decode("utf-8")
             except Exception:
                 pass  # Return raw if decode fails
+
+        if fmt_upper == "JUPYTER":
+            # Detect the notebook language from workspace metadata
+            detected_lang = _detect_notebook_language(client, notebook_path)
+            ipynb_str = _source_to_ipynb(content, detected_lang)
+            return json.dumps({
+                "notebook_path": notebook_path,
+                "format": "JUPYTER",
+                "content_length": len(ipynb_str),
+                "content": ipynb_str,
+            }, indent=2)
 
         return json.dumps({
             "notebook_path": notebook_path,
