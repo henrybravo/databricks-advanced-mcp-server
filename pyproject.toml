@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "databricks-advanced-mcp"
-version = "0.0.6"
+version = "0.0.7"
 description = "Advanced MCP server for Databricks workspace intelligence — dependency scanning, impact analysis, notebook review, and job/pipeline operations."
 readme = "README.md"
 license = { text = "MIT" }
