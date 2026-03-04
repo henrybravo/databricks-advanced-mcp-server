@@ -523,6 +523,7 @@ class TestReadNotebook:
     @patch("databricks_advanced_mcp.tools.workspace_ops.get_workspace_client")
     def test_read_notebook_success(self, mock_get_client):
         import base64
+
         from databricks_advanced_mcp.tools.workspace_ops import register
 
         export = MagicMock()

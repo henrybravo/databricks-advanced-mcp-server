@@ -6,6 +6,7 @@ extract table references and task definitions.
 
 from __future__ import annotations
 
+import contextlib
 import json
 from typing import Any
 
@@ -42,10 +43,8 @@ def register(mcp: FastMCP) -> None:
 
         source = export.content or ""
         if source:
-            try:
+            with contextlib.suppress(Exception):
                 source = base64.b64decode(source).decode("utf-8")
-            except Exception:
-                pass
 
         language = "python"  # Default; could detect from notebook metadata
         result = parse_notebook(source, default_language=language)

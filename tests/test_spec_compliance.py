@@ -16,19 +16,14 @@ import re
 import time
 from unittest.mock import MagicMock, patch
 
-import pytest
 from mcp.types import TextContent
 
 from databricks_advanced_mcp.graph.cache import GraphCache
 from databricks_advanced_mcp.graph.models import (
     DependencyGraph,
-    Edge,
-    EdgeType,
-    Node,
     NodeType,
 )
 from databricks_advanced_mcp.reviewers.performance import (
-    ReviewFinding,
     check_performance,
     extract_code_snippet,
 )
@@ -103,8 +98,9 @@ class TestStaleGraphInTools:
         cache.set(sample_graph)
         cache._timestamp = time.time() - cache.ttl - 100  # make stale
 
-        from databricks_advanced_mcp.tools.graph_ops import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.graph_ops import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -133,8 +129,9 @@ class TestStaleGraphInTools:
 
     def test_get_table_dependencies_no_graph_error(self):
         """get_table_dependencies returns error when no graph exists."""
-        from databricks_advanced_mcp.tools.graph_ops import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.graph_ops import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -175,8 +172,9 @@ class TestScanDltPipeline:
 
     def test_tool_registered(self):
         """scan_dlt_pipeline is registered as an MCP tool."""
-        from databricks_advanced_mcp.tools.dependency_scanner import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.dependency_scanner import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -187,8 +185,9 @@ class TestScanDltPipeline:
     @patch("databricks_advanced_mcp.tools.dependency_scanner.get_workspace_client")
     def test_successful_scan(self, mock_get_client):
         """scan_dlt_pipeline returns pipeline info for a valid ID."""
-        from databricks_advanced_mcp.tools.dependency_scanner import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.dependency_scanner import register
 
         # Mock pipeline detail
         mock_client = MagicMock()
@@ -217,8 +216,9 @@ class TestScanDltPipeline:
     @patch("databricks_advanced_mcp.tools.dependency_scanner.get_workspace_client")
     def test_pipeline_not_found(self, mock_get_client):
         """scan_dlt_pipeline returns error for non-existent pipeline."""
-        from databricks_advanced_mcp.tools.dependency_scanner import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.dependency_scanner import register
 
         mock_client = MagicMock()
         mock_client.pipelines.get.side_effect = Exception("Pipeline not found")
@@ -243,8 +243,9 @@ class TestScopedGraphBuilds:
 
     def test_workspace_scope_accepted(self):
         """scope='workspace' is valid (no error)."""
-        from databricks_advanced_mcp.tools.graph_ops import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.graph_ops import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -264,8 +265,9 @@ class TestScopedGraphBuilds:
 
     def test_path_scope_filters(self):
         """scope='path' with a valid path is accepted."""
-        from databricks_advanced_mcp.tools.graph_ops import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.graph_ops import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -289,8 +291,9 @@ class TestScopedGraphBuilds:
 
     def test_path_scope_missing_path_error(self):
         """scope='path' without a path value returns an error."""
-        from databricks_advanced_mcp.tools.graph_ops import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.graph_ops import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -303,8 +306,9 @@ class TestScopedGraphBuilds:
 
     def test_invalid_scope_error(self):
         """Invalid scope value returns an error."""
-        from databricks_advanced_mcp.tools.graph_ops import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.graph_ops import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -349,6 +353,9 @@ class TestScopedGraphBuilds:
         mock_export = MagicMock()
         mock_export.content = ""
         mock_client.workspace.export.return_value = mock_export
+
+        # Mock workspace.list to return empty (prevent MagicMock iteration issues on 3.11)
+        mock_client.workspace.list.return_value = []
 
         builder = GraphBuilder(mock_client)
         graph = builder.build(path_prefix="/Workspace/team")
@@ -530,8 +537,9 @@ class TestDescribeDetail:
     @patch("databricks_advanced_mcp.tools.table_info.get_settings")
     def test_get_table_info_includes_stats(self, mock_settings, mock_get_client, mock_describe):
         """get_table_info populates row_count and size_bytes for managed tables."""
-        from databricks_advanced_mcp.tools.table_info import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.table_info import register
 
         # Mock settings
         settings = MagicMock()
@@ -573,8 +581,9 @@ class TestDescribeDetail:
     @patch("databricks_advanced_mcp.tools.table_info.get_settings")
     def test_get_table_info_skips_views(self, mock_settings, mock_get_client, mock_describe):
         """get_table_info skips DESCRIBE DETAIL for views."""
-        from databricks_advanced_mcp.tools.table_info import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.table_info import register
 
         settings = MagicMock()
         settings.databricks_catalog = "cat"

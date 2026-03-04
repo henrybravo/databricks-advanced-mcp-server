@@ -6,6 +6,7 @@ DependencyGraph of workspace assets.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import Any
 
@@ -126,20 +127,19 @@ class GraphBuilder:
             self._add_table_edges(nb_node, refs)
 
         # SQL task
-        if task.sql_task:
-            if task.sql_task.query:
-                query_id = task.sql_task.query.query_id or "unknown"
-                query_node = Node(
-                    node_type=NodeType.QUERY,
-                    fqn=f"query::{query_id}",
-                    name=f"sql_query_{query_id}",
-                )
-                self._graph.add_node(query_node)
-                self._graph.add_edge(Edge(
-                    source_id=job_node.id,
-                    target_id=query_node.id,
-                    edge_type=EdgeType.TRIGGERS,
-                ))
+        if task.sql_task and task.sql_task.query:
+            query_id = task.sql_task.query.query_id or "unknown"
+            query_node = Node(
+                node_type=NodeType.QUERY,
+                fqn=f"query::{query_id}",
+                name=f"sql_query_{query_id}",
+            )
+            self._graph.add_node(query_node)
+            self._graph.add_edge(Edge(
+                source_id=job_node.id,
+                target_id=query_node.id,
+                edge_type=EdgeType.TRIGGERS,
+            ))
 
         # DLT pipeline task
         if task.pipeline_task:
@@ -350,10 +350,8 @@ class GraphBuilder:
             source = export.content or ""
             if source:
                 import base64
-                try:
+                with contextlib.suppress(Exception):
                     source = base64.b64decode(source).decode("utf-8")
-                except Exception:
-                    pass
 
                 result = parse_notebook(source)
                 return result.table_references

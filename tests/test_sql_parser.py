@@ -1,9 +1,7 @@
 """Unit tests for SQL parser."""
 
 from databricks_advanced_mcp.parsers.sql_parser import (
-    ColumnReference,
     SQLParseResult,
-    TableReference,
     extract_table_names,
     parse_sql,
 )
@@ -30,7 +28,7 @@ class TestParseSql:
     def test_insert_into(self):
         result = parse_sql("INSERT INTO main.silver.output SELECT * FROM main.bronze.input")
         assert len(result.tables) >= 2
-        
+
         write_refs = [r for r in result.tables if r.reference_type == "writes_to"]
         read_refs = [r for r in result.tables if r.reference_type == "reads_from"]
         assert len(write_refs) >= 1

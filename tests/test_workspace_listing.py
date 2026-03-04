@@ -6,17 +6,11 @@ import asyncio
 import json
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from databricks_advanced_mcp.graph.builder import GraphBuilder
 from databricks_advanced_mcp.graph.models import (
-    DependencyGraph,
-    Edge,
-    EdgeType,
     Node,
     NodeType,
 )
-
 
 # ------------------------------------------------------------------
 # Helpers to create mock workspace objects
@@ -63,8 +57,9 @@ class TestListWorkspaceNotebooks:
 
     def test_tool_registered(self):
         """Tool is registered with FastMCP."""
-        from databricks_advanced_mcp.tools.workspace_listing import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.workspace_listing import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -89,7 +84,7 @@ class TestListWorkspaceNotebooks:
         # Import the module and call the internal helper + tool logic directly
         from databricks_advanced_mcp.tools import workspace_listing
 
-        result = json.loads(
+        json.loads(
             workspace_listing.register.__module__  # just to ensure import
             and workspace_listing._list_notebooks_iterative(client, "/Workspace/Users/team", max_depth=10)
             and "not used"  # won't reach here
@@ -120,8 +115,9 @@ class TestListWorkspaceNotebooks:
         assert notebooks == []
 
         # Also verify the tool-level error handling via register
-        from databricks_advanced_mcp.tools.workspace_listing import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.workspace_listing import register
 
         mcp = FastMCP("test")
         register(mcp)

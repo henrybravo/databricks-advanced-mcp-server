@@ -10,7 +10,6 @@ import re
 
 from databricks_advanced_mcp.reviewers.performance import ReviewFinding, extract_code_snippet
 
-
 # ------------------------------------------------------------------
 # Standards rules
 # ------------------------------------------------------------------
@@ -46,7 +45,7 @@ def _check_python_standards(
     # STD001: Missing docstring for function definitions
     func_pattern = re.compile(r"def\s+\w+\s*\(")
     docstring_pattern = re.compile(r'def\s+\w+\s*\([^)]*\)\s*(?:->.*)?:\s*\n\s*(?:\"\"\"|\'\'\')' )
-    
+
     func_match = func_pattern.search(content)
     if func_match and not docstring_pattern.search(content):
         findings.append(ReviewFinding(
@@ -85,7 +84,7 @@ def _check_python_standards(
             code_snippet=extract_code_snippet(content, path_match),
         ))
 
-    # STD004: Magic commands in production code  
+    # STD004: Magic commands in production code
     magic_match = re.search(r"^\s*%(?:sh|pip|fs)\b", content, re.MULTILINE)
     if magic_match:
         findings.append(ReviewFinding(

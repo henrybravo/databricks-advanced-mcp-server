@@ -6,13 +6,13 @@ Defines nodes, edges, and a DependencyGraph wrapper around NetworkX DiGraph.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import networkx as nx
 
 
-class NodeType(str, Enum):
+class NodeType(StrEnum):
     """Types of nodes in the dependency graph."""
 
     TABLE = "table"
@@ -23,7 +23,7 @@ class NodeType(str, Enum):
     QUERY = "query"
 
 
-class EdgeType(str, Enum):
+class EdgeType(StrEnum):
     """Types of edges/relationships in the dependency graph."""
 
     READS_FROM = "reads_from"

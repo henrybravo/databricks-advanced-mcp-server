@@ -33,20 +33,19 @@ def _sql_suggestions(content: str, cell_index: int) -> list[ReviewFinding]:
 
     # OPT001: OPTIMIZE / Z-ORDER hint
     write_match = re.search(r"(?:MERGE\s+INTO|INSERT\s+(?:INTO|OVERWRITE))", content, re.IGNORECASE)
-    if write_match:
-        if not re.search(r"OPTIMIZE|ZORDER|Z-ORDER", content, re.IGNORECASE):
-            findings.append(ReviewFinding(
-                rule_id="OPT001",
-                category="optimization",
-                severity="info",
-                cell_index=cell_index,
-                message="Write operation without OPTIMIZE/Z-ORDER — consider adding after bulk writes.",
-                suggestion=(
-                    "Run OPTIMIZE table_name ZORDER BY (frequently_filtered_columns) "
-                    "after bulk writes to improve read performance."
-                ),
-                code_snippet=extract_code_snippet(content, write_match),
-            ))
+    if write_match and not re.search(r"OPTIMIZE|ZORDER|Z-ORDER", content, re.IGNORECASE):
+        findings.append(ReviewFinding(
+            rule_id="OPT001",
+            category="optimization",
+            severity="info",
+            cell_index=cell_index,
+            message="Write operation without OPTIMIZE/Z-ORDER — consider adding after bulk writes.",
+            suggestion=(
+                "Run OPTIMIZE table_name ZORDER BY (frequently_filtered_columns) "
+                "after bulk writes to improve read performance."
+            ),
+            code_snippet=extract_code_snippet(content, write_match),
+        ))
 
     # OPT002: Predicate pushdown hint
     cast_match = re.search(r"WHERE.*\bCAST\b.*\bAS\b", content, re.IGNORECASE)
@@ -85,24 +84,26 @@ def _sql_suggestions(content: str, cell_index: int) -> list[ReviewFinding]:
             category="optimization",
             severity="medium",
             cell_index=cell_index,
-            message=f"Deeply nested subqueries ({len(subquery_matches)} levels) — may hurt readability and performance.",
+            message=(
+                f"Deeply nested subqueries ({len(subquery_matches)} levels)"
+                " — may hurt readability and performance."
+            ),
             suggestion="Refactor using CTEs (WITH clause) for better readability and optimizer hints.",
             code_snippet=extract_code_snippet(content, subquery_matches[0]),
         ))
 
     # OPT005: Partition pruning — filter on partition column
     partition_match = re.search(r"FROM\s+\S+\s+WHERE\s+.*(?:date|dt|year|month|partition)", content, re.IGNORECASE)
-    if partition_match:
-        if not re.search(r"=|>=|<=|BETWEEN|IN\s*\(", content, re.IGNORECASE):
-            findings.append(ReviewFinding(
-                rule_id="OPT005",
-                category="optimization",
-                severity="medium",
-                cell_index=cell_index,
-                message="Possible partition column in WHERE but no equality/range filter for pruning.",
-                suggestion="Use equality (=) or range (BETWEEN) filters on partition columns for optimal pruning.",
-                code_snippet=extract_code_snippet(content, partition_match),
-            ))
+    if partition_match and not re.search(r"=|>=|<=|BETWEEN|IN\s*\(", content, re.IGNORECASE):
+        findings.append(ReviewFinding(
+            rule_id="OPT005",
+            category="optimization",
+            severity="medium",
+            cell_index=cell_index,
+            message="Possible partition column in WHERE but no equality/range filter for pruning.",
+            suggestion="Use equality (=) or range (BETWEEN) filters on partition columns for optimal pruning.",
+            code_snippet=extract_code_snippet(content, partition_match),
+        ))
 
     # OPT006: CREATE TABLE without CLUSTER BY (liquid clustering)
     create_match = re.search(
@@ -110,21 +111,20 @@ def _sql_suggestions(content: str, cell_index: int) -> list[ReviewFinding]:
         content,
         re.IGNORECASE,
     )
-    if create_match:
-        if not re.search(r"CLUSTER\s+BY|ZORDER|Z-ORDER|PARTITIONED?\s+BY", content, re.IGNORECASE):
-            findings.append(ReviewFinding(
-                rule_id="OPT006",
-                category="optimization",
-                severity="info",
-                cell_index=cell_index,
-                message="New Delta table created without CLUSTER BY (liquid clustering) or PARTITIONED BY.",
-                suggestion=(
-                    "For Delta Lake 3.1+ / Databricks Runtime 14.2+, prefer liquid clustering over static partitions:\n"
-                    "  CREATE TABLE my_table (id BIGINT, event_date DATE, ...)\n"
-                    "  CLUSTER BY (event_date, customer_id);"
-                ),
-                code_snippet=extract_code_snippet(content, create_match),
-            ))
+    if create_match and not re.search(r"CLUSTER\s+BY|ZORDER|Z-ORDER|PARTITIONED?\s+BY", content, re.IGNORECASE):
+        findings.append(ReviewFinding(
+            rule_id="OPT006",
+            category="optimization",
+            severity="info",
+            cell_index=cell_index,
+            message="New Delta table created without CLUSTER BY (liquid clustering) or PARTITIONED BY.",
+            suggestion=(
+                "For Delta Lake 3.1+ / Databricks Runtime 14.2+, prefer liquid clustering over static partitions:\n"
+                "  CREATE TABLE my_table (id BIGINT, event_date DATE, ...)\n"
+                "  CLUSTER BY (event_date, customer_id);"
+            ),
+            code_snippet=extract_code_snippet(content, create_match),
+        ))
 
     return findings
 
@@ -181,17 +181,16 @@ def _pyspark_suggestions(
 
     # OPT013: Cache pattern
     cache_match = re.search(r"\.cache\(\)", content)
-    if cache_match:
-        if not re.search(r"\.unpersist\(\)", content):
-            findings.append(ReviewFinding(
-                rule_id="OPT013",
-                category="optimization",
-                severity="low",
-                cell_index=cell_index,
-                message=".cache() without .unpersist() — cached data stays in memory.",
-                suggestion="Call .unpersist() when cached DataFrame is no longer needed to free memory.",
-                code_snippet=extract_code_snippet(content, cache_match),
-            ))
+    if cache_match and not re.search(r"\.unpersist\(\)", content):
+        findings.append(ReviewFinding(
+            rule_id="OPT013",
+            category="optimization",
+            severity="low",
+            cell_index=cell_index,
+            message=".cache() without .unpersist() — cached data stays in memory.",
+            suggestion="Call .unpersist() when cached DataFrame is no longer needed to free memory.",
+            code_snippet=extract_code_snippet(content, cache_match),
+        ))
 
     # OPT014: Use of display() without limit
     display_match = re.search(r"\bdisplay\s*\(\s*\w+\s*\)(?!\s*#)", content)
@@ -207,8 +206,9 @@ def _pyspark_suggestions(
         ))
 
     # OPT015: MLflow start_run without end_run
-    if re.search(r"mlflow\.start_run\(", content):
-        if not re.search(r"mlflow\.end_run\(|with\s+mlflow\.start_run", content):
+    if re.search(r"mlflow\.start_run\(", content) and not re.search(
+        r"mlflow\.end_run\(|with\s+mlflow\.start_run", content
+    ):
             mlflow_match = re.search(r"mlflow\.start_run\(", content)
             findings.append(ReviewFinding(
                 rule_id="OPT015",

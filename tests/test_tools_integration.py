@@ -13,8 +13,9 @@ class TestSqlExecutorTool:
     """Tests for the SQL executor tool."""
 
     def test_execute_query_returns_json(self, mock_workspace_client):
-        from databricks_advanced_mcp.tools.sql_executor import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.sql_executor import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -26,8 +27,9 @@ class TestTableInfoTool:
     """Tests for table info tools."""
 
     def test_tools_registered(self):
-        from databricks_advanced_mcp.tools.table_info import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.table_info import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -41,8 +43,9 @@ class TestDependencyScannerTools:
     """Tests for dependency scanner tools."""
 
     def test_tools_registered(self):
-        from databricks_advanced_mcp.tools.dependency_scanner import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.dependency_scanner import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -61,8 +64,9 @@ class TestGraphOpsTools:
     """Tests for graph operations tools."""
 
     def test_tools_registered(self):
-        from databricks_advanced_mcp.tools.graph_ops import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.graph_ops import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -77,8 +81,9 @@ class TestImpactAnalysisTool:
     """Tests for impact analysis tool."""
 
     def test_tool_registered(self):
-        from databricks_advanced_mcp.tools.impact_analysis import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.impact_analysis import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -90,8 +95,9 @@ class TestNotebookReviewerTool:
     """Tests for notebook reviewer tool."""
 
     def test_tool_registered(self):
-        from databricks_advanced_mcp.tools.notebook_reviewer import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.notebook_reviewer import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -103,8 +109,9 @@ class TestJobPipelineOpsTool:
     """Tests for job/pipeline ops tools."""
 
     def test_tools_registered(self):
-        from databricks_advanced_mcp.tools.job_pipeline_ops import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.job_pipeline_ops import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -121,8 +128,9 @@ class TestCatalogOpsTools:
     """Tests for catalog operations tools."""
 
     def test_tools_registered(self):
-        from databricks_advanced_mcp.tools.catalog_ops import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.catalog_ops import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -139,8 +147,9 @@ class TestComputeOpsTools:
     """Tests for compute operations tools."""
 
     def test_tools_registered(self):
-        from databricks_advanced_mcp.tools.compute_ops import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.compute_ops import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -157,8 +166,9 @@ class TestWarehouseOpsTools:
     """Tests for warehouse operations tools."""
 
     def test_tools_registered(self):
-        from databricks_advanced_mcp.tools.warehouse_ops import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.warehouse_ops import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -174,8 +184,9 @@ class TestVolumeOpsTools:
     """Tests for volume operations tools."""
 
     def test_tools_registered(self):
-        from databricks_advanced_mcp.tools.volume_ops import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.volume_ops import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -191,8 +202,9 @@ class TestWorkspaceOpsExtended:
     """Tests for extended workspace ops tools."""
 
     def test_new_tools_registered(self):
-        from databricks_advanced_mcp.tools.workspace_ops import register
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools.workspace_ops import register
 
         mcp = FastMCP("test")
         register(mcp)
@@ -211,8 +223,9 @@ class TestAllToolsRegistration:
     """Test that register_all_tools registers all 38 tools."""
 
     def test_total_tool_count(self):
-        from databricks_advanced_mcp.tools import register_all_tools
         from fastmcp import FastMCP
+
+        from databricks_advanced_mcp.tools import register_all_tools
 
         mcp = FastMCP("test")
         register_all_tools(mcp)

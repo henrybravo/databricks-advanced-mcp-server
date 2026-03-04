@@ -15,7 +15,6 @@ from fastmcp import FastMCP
 from databricks_advanced_mcp.client import get_workspace_client
 from databricks_advanced_mcp.config import get_settings
 
-
 # ------------------------------------------------------------------
 # Diagnostic engine
 # ------------------------------------------------------------------
@@ -198,8 +197,12 @@ def register(mcp: FastMCP) -> None:
                 "task_key": task.task_key,
             }
             if task_state:
-                task_info["life_cycle_state"] = str(task_state.life_cycle_state) if task_state.life_cycle_state else None
-                task_info["result_state"] = str(task_state.result_state) if task_state.result_state else None
+                task_info["life_cycle_state"] = (
+                    str(task_state.life_cycle_state) if task_state.life_cycle_state else None
+                )
+                task_info["result_state"] = (
+                    str(task_state.result_state) if task_state.result_state else None
+                )
 
                 # Diagnose errors
                 if task_state.state_message and task_state.result_state and "FAILED" in str(task_state.result_state):
@@ -395,7 +398,11 @@ def register(mcp: FastMCP) -> None:
         if not confirm:
             state_msg = ""
             if latest_run.state:
-                state_msg = str(latest_run.state.result_state) if latest_run.state.result_state else str(latest_run.state.life_cycle_state)
+                state_msg = (
+                    str(latest_run.state.result_state)
+                    if latest_run.state.result_state
+                    else str(latest_run.state.life_cycle_state)
+                )
 
             return json.dumps({
                 "action": "preview",

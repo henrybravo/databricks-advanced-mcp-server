@@ -128,7 +128,11 @@ def _extract_tables(
             reference_type=ref_type,
         )
         # Avoid duplicates
-        if not any(existing.fqn == ref.fqn and existing.reference_type == ref.reference_type for existing in result.tables):
+        already = any(
+            existing.fqn == ref.fqn and existing.reference_type == ref.reference_type
+            for existing in result.tables
+        )
+        if not already:
             result.tables.append(ref)
 
 

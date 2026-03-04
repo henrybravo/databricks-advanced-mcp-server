@@ -7,6 +7,7 @@ optimization suggestions), returning structured findings.
 from __future__ import annotations
 
 import base64
+import contextlib
 import json
 from typing import Any
 
@@ -51,10 +52,8 @@ def register(mcp: FastMCP) -> None:
 
         source = export.content or ""
         if source:
-            try:
+            with contextlib.suppress(Exception):
                 source = base64.b64decode(source).decode("utf-8")
-            except Exception:
-                pass
 
         # Parse notebook into cells
         result = parse_notebook(source)

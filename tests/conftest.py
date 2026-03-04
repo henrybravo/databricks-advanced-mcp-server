@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from databricks_advanced_mcp.graph.cache import GraphCache
 from databricks_advanced_mcp.graph.models import DependencyGraph, Edge, EdgeType, Node, NodeType
-
 
 # ------------------------------------------------------------------
 # Sample data
@@ -100,27 +99,27 @@ def gold_summary():
 def mock_workspace_client():
     """Create a mock Databricks WorkspaceClient."""
     client = MagicMock()
-    
+
     # Mock workspace.export
     export_result = MagicMock()
     export_result.content = None
     client.workspace.export.return_value = export_result
-    
+
     # Mock jobs.list
     client.jobs.list.return_value = []
-    
+
     # Mock pipelines.list_pipelines
     client.pipelines.list_pipelines.return_value = []
-    
+
     # Mock tables.get
     client.tables.get.return_value = MagicMock()
-    
+
     # Mock tables.list
     client.tables.list.return_value = []
-    
+
     # Mock statement_execution.execute_statement
     client.statement_execution.execute_statement.return_value = MagicMock()
-    
+
     return client
 
 

@@ -6,6 +6,7 @@ via the Unity Catalog API.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 from typing import Any
@@ -163,17 +164,13 @@ def register(mcp: FastMCP) -> None:
         if row_count is None and properties:
             stats_rows = properties.get("spark.sql.statistics.numRows")
             if stats_rows is not None:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     row_count = int(stats_rows)
-                except (ValueError, TypeError):
-                    pass
         if size_bytes is None and properties:
             stats_size = properties.get("spark.sql.statistics.totalSize")
             if stats_size is not None:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     size_bytes = int(stats_size)
-                except (ValueError, TypeError):
-                    pass
 
         result: dict[str, Any] = {
             "full_name": table.full_name or full_name,

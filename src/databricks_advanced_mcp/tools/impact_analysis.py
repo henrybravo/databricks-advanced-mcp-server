@@ -16,7 +16,6 @@ from fastmcp import FastMCP
 from databricks_advanced_mcp.graph.cache import GraphCache
 from databricks_advanced_mcp.graph.models import DependencyGraph, NodeType
 
-
 # ------------------------------------------------------------------
 # Impact report data structures
 # ------------------------------------------------------------------
@@ -132,10 +131,7 @@ def _build_affected_assets(
     direction: str = "downstream",
 ) -> list[AffectedAsset]:
     """Traverse the graph and build a list of affected assets with depth info."""
-    if direction == "downstream":
-        related = graph.get_downstream(start_node_id)
-    else:
-        related = graph.get_upstream(start_node_id)
+    related = graph.get_downstream(start_node_id) if direction == "downstream" else graph.get_upstream(start_node_id)
 
     assets: list[AffectedAsset] = []
     for node_id in related:
@@ -144,7 +140,10 @@ def _build_affected_assets(
             continue
 
         # Compute path for depth
-        path = graph.get_path(start_node_id, node_id) if direction == "downstream" else graph.get_path(node_id, start_node_id)
+        if direction == "downstream":
+            path = graph.get_path(start_node_id, node_id)
+        else:
+            path = graph.get_path(node_id, start_node_id)
         depth = len(path) - 1 if path else 1
 
         node_type = node_data.get("node_type", "unknown")

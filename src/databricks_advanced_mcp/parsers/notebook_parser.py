@@ -8,12 +8,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 from databricks_advanced_mcp.parsers.sql_parser import TableReference
 
 
-class CellType(str, Enum):
+class CellType(StrEnum):
     """Types of notebook cells."""
 
     SQL = "sql"
