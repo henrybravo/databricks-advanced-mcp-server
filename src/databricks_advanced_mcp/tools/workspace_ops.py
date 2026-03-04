@@ -287,10 +287,17 @@ def register(mcp: FastMCP) -> None:
     ) -> str:
         """Read/export the content of a Databricks notebook.
 
+        NOTE: The Databricks Workspace Export API only supports SOURCE and HTML
+        formats for notebook export. JUPYTER (.ipynb) is NOT a supported export
+        format, even though it is supported for import/upload. If a caller needs
+        a .ipynb file, it must be reconstructed from the SOURCE export — all code
+        will be intact, but prior execution outputs will not be available.
+
         Args:
             notebook_path: Workspace path to the notebook
                            (e.g. "/Workspace/Users/me/my_notebook").
             format: Export format — "SOURCE" (default) or "HTML".
+                    JUPYTER is not supported for export by the Databricks API.
 
         Returns:
             JSON with notebook content and metadata.
