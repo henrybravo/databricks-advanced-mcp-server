@@ -4,6 +4,8 @@
 [![PyPI](https://img.shields.io/pypi/v/databricks-advanced-mcp.svg)](https://pypi.org/project/databricks-advanced-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple.svg)](https://modelcontextprotocol.io)
+[![CI](https://github.com/henrybravo/databricks-advanced-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/henrybravo/databricks-advanced-mcp-server/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/henrybravo/databricks-advanced-mcp-server/branch/main/graph/badge.svg)](https://codecov.io/gh/henrybravo/databricks-advanced-mcp-server)
 
 An advanced [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that gives AI assistants deep visibility into your Databricks workspace - dependency scanning, impact analysis, notebook review, job/pipeline operations, SQL execution, and table metadata inspection.
 
@@ -242,6 +244,7 @@ Once configured, your AI assistant can call any of the 18 tools below. Here are 
 - *"List all jobs in the workspace"*
 - *"What's the current status of job 12345?"*
 - *"Show me the pipeline status for my DLT pipeline"*
+- *"Trigger a new run of job 67890 with parameter env=prod"*
 
 ## MCP Tools
 
@@ -263,7 +266,8 @@ Once configured, your AI assistant can call any of the 18 tools below. Here are 
 | `get_job_status` | Get detailed job run status with error diagnostics |
 | `list_pipelines` | List DLT pipelines with state and update status |
 | `get_pipeline_status` | Get pipeline update details with event log |
-| `trigger_rerun` | Trigger a job rerun (requires confirmation) |
+| `trigger_rerun` | Trigger a rerun of the latest failed job run (requires confirmation) |
+| `trigger_job_run` | Trigger a brand-new job run with optional parameters (requires confirmation) |
 | `list_workspace_notebooks` | List all notebooks in a workspace path |
 
 ## Configuration Reference
@@ -275,6 +279,10 @@ Once configured, your AI assistant can call any of the 18 tools below. Here are 
 | `DATABRICKS_WAREHOUSE_ID` | Yes | — | SQL warehouse ID for query execution |
 | `DATABRICKS_CATALOG` | No | `main` | Default catalog for unqualified table names — use `workspace` for AWS/GCP |
 | `DATABRICKS_SCHEMA` | No | `default` | Default schema for unqualified table names |
+| `GRAPH_CACHE_TTL` | No | `3600` | Dependency graph cache TTL in seconds |
+| `GRAPH_REFRESH_INTERVAL` | No | `0` | Auto-refresh the graph in the background every N seconds. `0` disables auto-refresh |
+
+> **Security note:** The `execute_query` tool can run **any SQL** against your warehouse, including DDL (`DROP TABLE`, `ALTER TABLE`) and DML (`DELETE`, `UPDATE`). Use a least-privilege service principal (see [Security & Governance](#security--governance) below) rather than a personal admin PAT in production environments.
 
 ### Cloud Provider Notes
 
@@ -287,6 +295,40 @@ This server is tested against **Azure Databricks** and **Databricks on AWS** (`.
 | Workspace root objects | `DIRECTORY` | `DIRECTORY` and `REPO` |
 
 All tools work on both platforms. Set `DATABRICKS_CATALOG` to match your workspace's default catalog.
+
+## Security & Governance
+
+### Recommended: Service Principal with Least Privilege
+
+Avoid storing a personal admin PAT in `.env` or VS Code config. Instead, create a dedicated service principal with only the permissions required:
+
+```sql
+-- Grant read access on the catalog and schema
+GRANT USE CATALOG ON CATALOG main TO `sp-databricks-mcp`;
+GRANT USE SCHEMA ON SCHEMA main.default TO `sp-databricks-mcp`;
+GRANT SELECT ON SCHEMA main.default TO `sp-databricks-mcp`;
+
+-- For job operations (trigger_rerun, trigger_job_run, get_job_status)
+-- Grant CAN_MANAGE_RUN on specific jobs only, via the Databricks UI or API
+```
+
+Set `DATABRICKS_TOKEN` to the service principal's OAuth token or M2M secret. The Databricks SDK supports [OAuth M2M authentication](https://docs.databricks.com/en/dev-tools/auth/oauth-m2m.html) natively — no PAT required.
+
+### Tool Risk Levels
+
+| Risk | Tools | Notes |
+|------|-------|-------|
+| **Read-only** | `execute_query` (SELECT only), `get_table_info`, `list_tables`, `scan_*`, `list_*`, `get_*`, `build_dependency_graph`, `get_table_dependencies`, `analyze_impact`, `review_notebook`, `list_workspace_notebooks` | Safe with read-only grants |
+| **Mutating** | `trigger_rerun`, `trigger_job_run` | Require `confirm=True`; grant CAN_MANAGE_RUN on specific jobs only |
+| **Potentially destructive** | `execute_query` with DDL/DML | Scope warehouse permissions to prevent `DROP`/`ALTER` if not needed |
+
+### Unity Catalog ACLs
+
+All `execute_query` and `get_table_info` calls respect Unity Catalog row/column-level security. If the token's principal lacks `SELECT` on a table, the operation fails with a permission error — expected and correct behaviour.
+
+### Query Guard
+
+To limit `execute_query` to read-only statements, restrict the SQL warehouse's channel policy or use a dedicated read-only warehouse for this MCP server.
 
 ## Infrastructure (Optional)
 
@@ -307,8 +349,11 @@ cd infra
 # Install with dev dependencies
 uv pip install -e ".[dev]"
 
-# Run tests
-uv run pytest
+# Run tests (excluding live integration tests)
+uv run pytest tests/ --ignore=tests/test_workspace_ops_live.py -v
+
+# Run tests with coverage report
+uv run pytest tests/ --cov=src/databricks_advanced_mcp --cov-report=term-missing --ignore=tests/test_workspace_ops_live.py
 
 # Lint
 uv run ruff check src/ tests/
@@ -349,3 +394,7 @@ src/databricks_advanced_mcp/
 ## License
 
 [MIT](LICENSE)
+
+---
+
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, PR checklist, and a list of wanted features.

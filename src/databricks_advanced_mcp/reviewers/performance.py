@@ -170,6 +170,50 @@ _PERFORMANCE_RULES: list[dict[str, Any]] = [
         "suggestion": "Replace with built-in Spark functions or Pandas UDFs (@pandas_udf) for better performance.",
         "cell_types": {"python"},
     },
+    {
+        "id": "PERF009",
+        "name": "Skew join without hint",
+        "pattern": re.compile(
+            r"\.join\(.*(?:id|key|customer_id|user_id|account_id)",
+            re.IGNORECASE,
+        ),
+        "severity": "medium",
+        "message": "Join on a potentially high-cardinality key without a skew hint.",
+        "suggestion": (
+            "If data is skewed, add SKEW JOIN hints or use salting: "
+            "spark.sql('SELECT /*+ SKEW_JOIN(t, \'id\') */ ...'). "
+            "Enable AQE: spark.conf.set('spark.sql.adaptive.enabled', 'true')."
+        ),
+        "cell_types": {"python", "scala"},
+    },
+    {
+        "id": "PERF010",
+        "name": "Write operations inside a loop (small files)",
+        "pattern": re.compile(
+            r"for\s+\w+\s+in\s+.*:\s*\n(?:.*\n)*?.*(?:\.write\.|saveAsTable|\.save\()",
+            re.MULTILINE,
+        ),
+        "severity": "high",
+        "message": "Write operation inside a loop \u2014 likely to create many small files.",
+        "suggestion": (
+            "Accumulate data and write once outside the loop, or use Delta merge/upsert patterns. "
+            "Many small files degrade read performance significantly."
+        ),
+        "cell_types": {"python", "scala"},
+    },
+    {
+        "id": "PERF011",
+        "name": "Streaming writeStream without checkpointing",
+        "pattern": re.compile(r"\.writeStream\b"),
+        "severity": "high",
+        "message": "Structured Streaming writeStream detected \u2014 verify a checkpoint location is configured.",
+        "suggestion": (
+            "Always set a checkpoint location: "
+            ".option('checkpointLocation', '/path/to/checkpoint'). "
+            "Without it, the stream cannot recover from failures."
+        ),
+        "cell_types": {"python", "scala"},
+    },
 ]
 
 

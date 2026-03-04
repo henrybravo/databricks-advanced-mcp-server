@@ -13,6 +13,7 @@ from typing import Any
 from fastmcp import FastMCP
 
 from databricks_advanced_mcp.client import get_workspace_client
+from databricks_advanced_mcp.config import get_settings
 
 
 # ------------------------------------------------------------------
@@ -429,3 +430,76 @@ def register(mcp: FastMCP) -> None:
                     "error": f"Failed to trigger rerun: {e2}",
                     "repair_error": str(e),
                 })
+
+    @mcp.tool()
+    def trigger_job_run(
+        job_id: str,
+        job_parameters: str = "{}",
+        confirm: bool = False,
+    ) -> str:
+        """Trigger a new run of a Databricks job (run now).
+
+        Unlike trigger_rerun (which repairs the latest failed run), this
+        tool starts a fresh new run of the job — useful for scheduled jobs,
+        manual triggers, or testing with different parameters.
+
+        This is a MUTATING operation. When confirm=False (default), returns
+        a preview. Set confirm=True to actually trigger the run.
+
+        Args:
+            job_id: The Databricks job ID to run.
+            job_parameters: JSON string of key-value pairs to pass as job
+                parameters, e.g. '{"env": "prod", "date": "2026-03-04"}'.
+                Defaults to empty dict (use job defaults).
+            confirm: Set to True to actually trigger the run.
+
+        Returns:
+            JSON with run preview or the new run_id and a direct link.
+        """
+        client = get_workspace_client()
+
+        # Parse job_parameters
+        try:
+            params: dict[str, str] = json.loads(job_parameters) if job_parameters else {}
+        except Exception:
+            return json.dumps({"error": f"Invalid job_parameters JSON: {job_parameters}"})
+
+        # Fetch job metadata for the preview
+        job_meta: dict[str, Any] = {"job_id": job_id}
+        try:
+            job_detail = client.jobs.get(int(job_id))
+            if job_detail.settings:
+                job_meta["name"] = job_detail.settings.name
+        except Exception:
+            pass
+
+        if not confirm:
+            return json.dumps({
+                "action": "preview",
+                "job_id": job_id,
+                "job_name": job_meta.get("name"),
+                "job_parameters": params,
+                "message": f"Would trigger a new run of job {job_id}.",
+                "warning": "Set confirm=True to actually trigger the run.",
+            }, indent=2)
+
+        # Trigger the run
+        try:
+            kwargs: dict[str, Any] = {}
+            if params:
+                kwargs["notebook_params"] = params
+            new_run = client.jobs.run_now(job_id=int(job_id), **kwargs)
+            run_id = new_run.run_id
+            host = get_settings().databricks_host.rstrip("/")
+            run_url = f"{host}/#job/{job_id}/run/{run_id}" if run_id else None
+            return json.dumps({
+                "action": "triggered",
+                "job_id": job_id,
+                "job_name": job_meta.get("name"),
+                "run_id": str(run_id),
+                "run_url": run_url,
+                "job_parameters": params,
+                "message": "New job run triggered successfully.",
+            }, indent=2)
+        except Exception as e:
+            return json.dumps({"error": f"Failed to trigger job run: {e}"})

@@ -1,0 +1,37 @@
+{
+  "name": "Databricks Advanced MCP Server",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "onCreateCommand": "pip install uv && uv venv .venv && uv pip install -e '.[dev]' --python .venv/bin/python",
+  "postCreateCommand": "cp -n .env.example .env 2>/dev/null || true",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.mypy-type-checker",
+        "charliermarsh.ruff",
+        "github.copilot",
+        "github.copilot-chat"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+        "editor.formatOnSave": true,
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        }
+      }
+    }
+  },
+  "remoteEnv": {
+    "DATABRICKS_HOST": "${localEnv:DATABRICKS_HOST}",
+    "DATABRICKS_TOKEN": "${localEnv:DATABRICKS_TOKEN}",
+    "DATABRICKS_WAREHOUSE_ID": "${localEnv:DATABRICKS_WAREHOUSE_ID}",
+    "DATABRICKS_CATALOG": "${localEnv:DATABRICKS_CATALOG:main}",
+    "DATABRICKS_SCHEMA": "${localEnv:DATABRICKS_SCHEMA:default}"
+  },
+  "forwardPorts": [],
+  "postStartCommand": "echo 'Dev container ready. Run: uv run pytest tests/ --ignore=tests/test_workspace_ops_live.py'"
+}

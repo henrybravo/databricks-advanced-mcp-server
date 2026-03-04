@@ -23,6 +23,12 @@ class Settings(BaseSettings):
     # Graph cache staleness threshold in seconds (default: 1 hour)
     graph_cache_ttl: int = 3600
 
+    # Automatic background graph refresh interval in seconds.
+    # Set to 0 (default) to disable auto-refresh.
+    # When > 0, the server will rebuild the dependency graph in the background
+    # on this interval (e.g. set to 3600 for hourly refresh).
+    graph_refresh_interval: int = 0
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

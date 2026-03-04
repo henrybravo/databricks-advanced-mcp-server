@@ -104,6 +104,28 @@ def _sql_suggestions(content: str, cell_index: int) -> list[ReviewFinding]:
                 code_snippet=extract_code_snippet(content, partition_match),
             ))
 
+    # OPT006: CREATE TABLE without CLUSTER BY (liquid clustering)
+    create_match = re.search(
+        r"CREATE\s+(?:OR\s+REPLACE\s+)?(?:TABLE|DELTA\s+TABLE)\s+\S+",
+        content,
+        re.IGNORECASE,
+    )
+    if create_match:
+        if not re.search(r"CLUSTER\s+BY|ZORDER|Z-ORDER|PARTITIONED?\s+BY", content, re.IGNORECASE):
+            findings.append(ReviewFinding(
+                rule_id="OPT006",
+                category="optimization",
+                severity="info",
+                cell_index=cell_index,
+                message="New Delta table created without CLUSTER BY (liquid clustering) or PARTITIONED BY.",
+                suggestion=(
+                    "For Delta Lake 3.1+ / Databricks Runtime 14.2+, prefer liquid clustering over static partitions:\n"
+                    "  CREATE TABLE my_table (id BIGINT, event_date DATE, ...)\n"
+                    "  CLUSTER BY (event_date, customer_id);"
+                ),
+                code_snippet=extract_code_snippet(content, create_match),
+            ))
+
     return findings
 
 
@@ -183,5 +205,42 @@ def _pyspark_suggestions(
             suggestion="Use display(df.limit(100)) to preview large DataFrames efficiently.",
             code_snippet=extract_code_snippet(content, display_match),
         ))
+
+    # OPT015: MLflow start_run without end_run
+    if re.search(r"mlflow\.start_run\(", content):
+        if not re.search(r"mlflow\.end_run\(|with\s+mlflow\.start_run", content):
+            mlflow_match = re.search(r"mlflow\.start_run\(", content)
+            findings.append(ReviewFinding(
+                rule_id="OPT015",
+                category="optimization",
+                severity="medium",
+                cell_index=cell_index,
+                message="mlflow.start_run() without mlflow.end_run() or context manager.",
+                suggestion=(
+                    "Use mlflow.end_run() after training, or wrap in a context manager:\n"
+                    "  with mlflow.start_run():\n"
+                    "      ...  # training code"
+                ),
+                code_snippet=extract_code_snippet(content, mlflow_match),
+            ))
+
+    # OPT016: MLflow experiment without logging params/metrics
+    if re.search(r"mlflow\.start_run\(|mlflow\.set_experiment\(", content):
+        has_log = re.search(r"mlflow\.log_(?:param|params|metric|metrics|artifact)", content)
+        if not has_log:
+            mlflow_match = re.search(r"mlflow\.start_run\(|mlflow\.set_experiment\(", content)
+            findings.append(ReviewFinding(
+                rule_id="OPT016",
+                category="optimization",
+                severity="info",
+                cell_index=cell_index,
+                message="MLflow experiment started but no params/metrics logged.",
+                suggestion=(
+                    "Log hyperparameters and metrics for full experiment tracking:\n"
+                    "  mlflow.log_params({'lr': 0.01, 'epochs': 10})\n"
+                    "  mlflow.log_metrics({'accuracy': acc, 'loss': loss})"
+                ),
+                code_snippet=extract_code_snippet(content, mlflow_match),
+            ))
 
     return findings

@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "feature/**"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv pip install -e ".[dev]" --system
+
+      - name: Install pytest-cov
+        run: uv pip install pytest-cov --system
+
+      - name: Run tests with coverage
+        run: |
+          uv run pytest tests/ \
+            --cov=src/databricks_advanced_mcp \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            -v \
+            --ignore=tests/test_workspace_ops_live.py
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          fail_ci_if_error: false
+
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv pip install -e ".[dev]" --system
+
+      - name: Ruff lint
+        run: uv run ruff check src/ tests/
+
+      - name: Mypy type check
+        run: uv run mypy src/
