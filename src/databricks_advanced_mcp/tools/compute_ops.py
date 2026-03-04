@@ -95,7 +95,7 @@ def register(mcp: FastMCP) -> None:
             "autoscale": autoscale,
             "autotermination_minutes": c.autotermination_minutes or 0,
             "start_time": str(c.start_time) if c.start_time else None,
-            "last_activity_time": str(c.last_activity_time) if c.last_activity_time else None,
+            "last_activity_time": str(getattr(c, "last_activity_time", None) or "") or None,
             "cluster_source": str(c.cluster_source) if c.cluster_source else "",
             "spark_conf": dict(c.spark_conf) if c.spark_conf else {},
         }

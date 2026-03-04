@@ -86,7 +86,7 @@ class GraphBuilder:
             job_node = Node(
                 node_type=NodeType.JOB,
                 fqn=job_id,
-                name=job_name,
+                name=job_name or f"job_{job_id}",
                 metadata={"job_id": job_id},
             )
             self._graph.add_node(job_node)

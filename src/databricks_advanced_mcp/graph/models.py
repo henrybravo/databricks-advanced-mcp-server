@@ -78,10 +78,10 @@ class DependencyGraph:
     """
 
     def __init__(self) -> None:
-        self._graph = nx.DiGraph()
+        self._graph: nx.DiGraph[str] = nx.DiGraph()
 
     @property
-    def graph(self) -> nx.DiGraph:
+    def graph(self) -> nx.DiGraph[str]:
         """Access the underlying NetworkX graph."""
         return self._graph
 

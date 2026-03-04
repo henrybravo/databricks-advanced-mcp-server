@@ -413,6 +413,8 @@ def register(mcp: FastMCP) -> None:
 
         # Actually trigger the rerun
         try:
+            if run_id is None:
+                return json.dumps({"error": "No run ID found for latest run."})
             repair_run = client.jobs.repair_run(run_id=run_id, rerun_all_failed_tasks=True)
             return json.dumps({
                 "action": "triggered",

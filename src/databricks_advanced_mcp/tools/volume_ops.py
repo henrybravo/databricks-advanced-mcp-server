@@ -150,7 +150,10 @@ def register(mcp: FastMCP) -> None:
 
         try:
             response = client.files.download(volume_path)
-            raw = response.contents.read(max_bytes)
+            contents = response.contents
+            if contents is None:
+                return json.dumps({"error": f"No content returned for '{volume_path}'"})
+            raw = contents.read(max_bytes)
         except Exception as e:
             return json.dumps({"error": f"Failed to read file '{volume_path}': {e}"})
 

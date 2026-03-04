@@ -27,5 +27,5 @@ def get_workspace_client() -> WorkspaceClient:
             kwargs["host"] = settings.databricks_host
         if settings.databricks_token:
             kwargs["token"] = settings.databricks_token
-        _client = WorkspaceClient(**kwargs)
+        _client = WorkspaceClient(**kwargs)  # type: ignore[arg-type]
     return _client
