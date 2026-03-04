@@ -103,7 +103,7 @@ class TestStaleGraphInTools:
         cache.set(sample_graph)
         cache._timestamp = time.time() - cache.ttl - 100  # make stale
 
-        from databricks_advanced_mcp.tools.dependency_scanner import register
+        from databricks_advanced_mcp.tools.graph_ops import register
         from fastmcp import FastMCP
 
         mcp = FastMCP("test")
@@ -133,7 +133,7 @@ class TestStaleGraphInTools:
 
     def test_get_table_dependencies_no_graph_error(self):
         """get_table_dependencies returns error when no graph exists."""
-        from databricks_advanced_mcp.tools.dependency_scanner import register
+        from databricks_advanced_mcp.tools.graph_ops import register
         from fastmcp import FastMCP
 
         mcp = FastMCP("test")
@@ -243,13 +243,13 @@ class TestScopedGraphBuilds:
 
     def test_workspace_scope_accepted(self):
         """scope='workspace' is valid (no error)."""
-        from databricks_advanced_mcp.tools.dependency_scanner import register
+        from databricks_advanced_mcp.tools.graph_ops import register
         from fastmcp import FastMCP
 
         mcp = FastMCP("test")
         register(mcp)
 
-        with patch("databricks_advanced_mcp.tools.dependency_scanner.get_workspace_client") as m:
+        with patch("databricks_advanced_mcp.tools.graph_ops.get_workspace_client") as m:
             mock_client = MagicMock()
             mock_client.jobs.list.return_value = []
             mock_client.pipelines.list_pipelines.return_value = []
@@ -264,13 +264,13 @@ class TestScopedGraphBuilds:
 
     def test_path_scope_filters(self):
         """scope='path' with a valid path is accepted."""
-        from databricks_advanced_mcp.tools.dependency_scanner import register
+        from databricks_advanced_mcp.tools.graph_ops import register
         from fastmcp import FastMCP
 
         mcp = FastMCP("test")
         register(mcp)
 
-        with patch("databricks_advanced_mcp.tools.dependency_scanner.get_workspace_client") as m:
+        with patch("databricks_advanced_mcp.tools.graph_ops.get_workspace_client") as m:
             mock_client = MagicMock()
             mock_client.jobs.list.return_value = []
             mock_client.pipelines.list_pipelines.return_value = []
@@ -289,7 +289,7 @@ class TestScopedGraphBuilds:
 
     def test_path_scope_missing_path_error(self):
         """scope='path' without a path value returns an error."""
-        from databricks_advanced_mcp.tools.dependency_scanner import register
+        from databricks_advanced_mcp.tools.graph_ops import register
         from fastmcp import FastMCP
 
         mcp = FastMCP("test")
@@ -303,7 +303,7 @@ class TestScopedGraphBuilds:
 
     def test_invalid_scope_error(self):
         """Invalid scope value returns an error."""
-        from databricks_advanced_mcp.tools.dependency_scanner import register
+        from databricks_advanced_mcp.tools.graph_ops import register
         from fastmcp import FastMCP
 
         mcp = FastMCP("test")
@@ -342,6 +342,7 @@ class TestScopedGraphBuilds:
         mock_job.settings.tasks = [mock_task_in, mock_task_out]
 
         mock_client.jobs.list.return_value = [mock_job]
+        mock_client.jobs.get.return_value = mock_job
         mock_client.pipelines.list_pipelines.return_value = []
 
         # Mock notebook export to prevent actual API calls

@@ -7,7 +7,7 @@
 [![CI](https://github.com/henrybravo/databricks-advanced-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/henrybravo/databricks-advanced-mcp-server/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/henrybravo/databricks-advanced-mcp-server/branch/main/graph/badge.svg)](https://codecov.io/gh/henrybravo/databricks-advanced-mcp-server)
 
-An advanced [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that gives AI assistants deep visibility into your Databricks workspace - dependency scanning, impact analysis, notebook review, job/pipeline operations, SQL execution, and table metadata inspection.
+An advanced [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that gives AI assistants deep visibility into your Databricks workspace — 43 tools covering dependency scanning, impact analysis, notebook review, job/pipeline operations, SQL execution, catalog management, compute & warehouse control, and Unity Catalog volumes.
 
 ## Features
 
@@ -16,9 +16,15 @@ An advanced [Model Context Protocol (MCP)](https://modelcontextprotocol.io) serv
 | **SQL Execution** | Run SQL queries against Databricks SQL warehouses with configurable result limits |
 | **Table Information** | Inspect table metadata, schemas, column details, row counts, and storage info |
 | **Dependency Scanning** | Scan notebooks, jobs, and DLT pipelines to build a workspace dependency graph (DAG) |
+| **Graph Operations** | Build, query, and refresh the workspace dependency graph |
 | **Impact Analysis** | Predict downstream breakage from column drops, schema changes, or pipeline failures |
 | **Notebook Review** | Detect performance anti-patterns, coding standard violations, and suggest optimizations |
 | **Job & Pipeline Ops** | List jobs/pipelines, get run status with error diagnostics, trigger reruns |
+| **Catalog & Schema** | List catalogs, list/describe/create/drop Unity Catalog schemas |
+| **Compute** | List clusters, inspect status, start/stop/restart clusters |
+| **SQL Warehouses** | List warehouses, inspect status, start/stop SQL warehouses |
+| **Workspace Ops** | Create/read/delete notebooks, upload files, get workspace object metadata |
+| **UC Volumes** | List volumes, inspect metadata, browse and read files in Unity Catalog volumes |
 
 ## Demo
 
@@ -219,12 +225,18 @@ Alternatively, with a source install you can use separate `.env` files per works
 
 ### 4. Start using
 
-Once configured, your AI assistant can call any of the 18 tools below. Here are example prompts organized by domain:
+Once configured, your AI assistant can call any of the 43 tools below. Here are example prompts organized by domain:
 
 **Explore your data**
 - *"What tables exist in the `analytics` schema?"*
 - *"Show me the schema and metadata for `main.sales.orders`"*
 - *"Run a query that counts and sums orders by status from `main.sales.orders`"*
+
+**Unity Catalog & schemas**
+- *"List all catalogs I have access to"*
+- *"What schemas exist in the analytics catalog?"*
+- *"Describe the `main.default` schema"*
+- *"Create a new schema called `staging` in the analytics catalog"*
 
 **Understand dependencies**
 - *"Build the full workspace dependency graph"*
@@ -246,29 +258,102 @@ Once configured, your AI assistant can call any of the 18 tools below. Here are 
 - *"Show me the pipeline status for my DLT pipeline"*
 - *"Trigger a new run of job 67890 with parameter env=prod"*
 
+**Compute & SQL warehouses**
+- *"Show me the status of cluster abc-123"*
+- *"List all running clusters"*
+- *"Stop the dev SQL warehouse"*
+- *"What warehouses are currently active?"*
+
+**Workspace & volumes**
+- *"Export the ETL notebook as source"*
+- *"What's the status of the notebook at /Workspace/Users/me/analysis?"*
+- *"What files are in the raw-data volume?"*
+- *"Read the config.json file from the settings volume"*
+
 ## MCP Tools
 
+### SQL & Tables (3 tools)
 | Tool | Description |
 |---|---|
 | `execute_query` | Execute SQL against a Databricks SQL warehouse |
 | `get_table_info` | Get table metadata — columns, row count, properties, storage |
 | `list_tables` | List tables in a catalog.schema |
+
+### Dependency Scanning (4 tools)
+| Tool | Description |
+|---|---|
 | `scan_notebook` | Scan a notebook for table/column references |
 | `scan_jobs` | Scan all jobs for table dependencies |
 | `scan_dlt_pipelines` | Scan all DLT pipelines for source/target tables |
 | `scan_dlt_pipeline` | Scan a single DLT pipeline by ID for source/target tables |
+
+### Graph Operations (3 tools)
+| Tool | Description |
+|---|---|
 | `build_dependency_graph` | Build the full workspace dependency graph |
 | `get_table_dependencies` | Get upstream/downstream dependencies for a table |
 | `refresh_graph` | Invalidate and rebuild the dependency graph cache |
+
+### Impact Analysis & Review (2 tools)
+| Tool | Description |
+|---|---|
 | `analyze_impact` | Analyze impact of column drop / schema change / pipeline failure |
 | `review_notebook` | Review a notebook for issues, anti-patterns, and optimizations |
+
+### Job & Pipeline Ops (6 tools)
+| Tool | Description |
+|---|---|
 | `list_jobs` | List jobs with status and schedule info |
 | `get_job_status` | Get detailed job run status with error diagnostics |
 | `list_pipelines` | List DLT pipelines with state and update status |
 | `get_pipeline_status` | Get pipeline update details with event log |
 | `trigger_rerun` | Trigger a rerun of the latest failed job run (requires confirmation) |
 | `trigger_job_run` | Trigger a brand-new job run with optional parameters (requires confirmation) |
+
+### Catalog & Schema (5 tools)
+| Tool | Description |
+|---|---|
+| `list_catalogs` | List all Unity Catalog catalogs accessible to the current principal |
+| `list_schemas` | List all schemas in a catalog |
+| `describe_schema` | Get schema metadata, owner, comment, and properties |
+| `create_schema` | Create a new schema in a catalog (requires confirmation) |
+| `drop_schema` | Drop a schema — must be empty (requires confirmation) |
+
+### Compute (5 tools)
+| Tool | Description |
+|---|---|
+| `list_clusters` | List all clusters with state, creator, and node type |
+| `get_cluster_status` | Get detailed cluster status, spark version, and config |
+| `start_cluster` | Start a terminated cluster (requires confirmation) |
+| `stop_cluster` | Stop (terminate) a running cluster (requires confirmation) |
+| `restart_cluster` | Restart a running cluster (requires confirmation) |
+
+### SQL Warehouses (4 tools)
+| Tool | Description |
+|---|---|
+| `list_warehouses` | List all SQL warehouses with state, size, and type |
+| `get_warehouse_status` | Get detailed warehouse config, scaling, and auto-stop settings |
+| `start_warehouse` | Start a stopped SQL warehouse (requires confirmation) |
+| `stop_warehouse` | Stop a running SQL warehouse (requires confirmation) |
+
+### Workspace Ops (7 tools)
+| Tool | Description |
+|---|---|
 | `list_workspace_notebooks` | List all notebooks in a workspace path |
+| `create_job` | Create a new Databricks job (requires confirmation) |
+| `create_notebook` | Create a notebook in the workspace (requires confirmation) |
+| `workspace_upload` | Upload a local file to the workspace (requires confirmation) |
+| `read_notebook` | Read/export a notebook's content (SOURCE or HTML) |
+| `delete_workspace_item` | Delete a notebook or folder (requires confirmation) |
+| `get_workspace_status` | Get metadata for a workspace object (type, language, modified) |
+
+### UC Volumes (4 tools)
+| Tool | Description |
+|---|---|
+| `list_volumes` | List Unity Catalog volumes in a catalog.schema |
+| `get_volume_info` | Get volume metadata (type, storage location, owner) |
+| `list_volume_files` | List files and directories inside a volume |
+| `read_volume_file` | Read contents of a file from a volume |
 
 ## Configuration Reference
 
@@ -318,9 +403,9 @@ Set `DATABRICKS_TOKEN` to the service principal's OAuth token or M2M secret. The
 
 | Risk | Tools | Notes |
 |------|-------|-------|
-| **Read-only** | `execute_query` (SELECT only), `get_table_info`, `list_tables`, `scan_*`, `list_*`, `get_*`, `build_dependency_graph`, `get_table_dependencies`, `analyze_impact`, `review_notebook`, `list_workspace_notebooks` | Safe with read-only grants |
-| **Mutating** | `trigger_rerun`, `trigger_job_run` | Require `confirm=True`; grant CAN_MANAGE_RUN on specific jobs only |
-| **Potentially destructive** | `execute_query` with DDL/DML | Scope warehouse permissions to prevent `DROP`/`ALTER` if not needed |
+| **Read-only** | `execute_query` (SELECT only), `get_table_info`, `list_tables`, `scan_*`, `list_*`, `get_*`, `describe_schema`, `build_dependency_graph`, `get_table_dependencies`, `analyze_impact`, `review_notebook`, `read_notebook`, `read_volume_file` | Safe with read-only grants |
+| **Mutating** | `trigger_rerun`, `trigger_job_run`, `create_schema`, `start_cluster`, `stop_cluster`, `restart_cluster`, `start_warehouse`, `stop_warehouse`, `create_job`, `create_notebook`, `workspace_upload` | Require `confirm=True` |
+| **Destructive** | `drop_schema`, `delete_workspace_item`, `execute_query` with DDL/DML | Require `confirm=True`; scope permissions carefully |
 
 ### Unity Catalog ACLs
 
@@ -366,29 +451,36 @@ uv run mypy src/
 
 ```
 src/databricks_advanced_mcp/
-├── server.py          # FastMCP server + CLI entry point
-├── config.py          # Pydantic settings from env vars
-├── client.py          # Databricks SDK client factory
-├── tools/             # MCP tool implementations
-│   ├── sql_executor.py
-│   ├── dependency_scanner.py
-│   ├── impact_analysis.py
-│   ├── notebook_reviewer.py
-│   ├── job_pipeline_ops.py
-|   ├── table_info.py
-|   └── workspace_listing.py
-├── parsers/           # Code parsing engines
-│   ├── sql_parser.py       # sqlglot-based SQL extraction
-│   ├── notebook_parser.py  # Databricks notebook cell parsing
-│   └── dlt_parser.py       # DLT pipeline definition parsing
-├── graph/             # Dependency graph
-│   ├── models.py      # Node, Edge, DependencyGraph data models
-│   ├── builder.py     # Graph builder (orchestrates scans)
-│   └── cache.py       # In-memory graph cache with TTL
-└── reviewers/         # Notebook review rule engines
-    ├── performance.py # Performance anti-patterns
-    ├── standards.py   # Coding standards checks
-    └── suggestions.py # Optimization suggestions
+├── server.py              # FastMCP server + CLI entry point
+├── config.py              # Pydantic settings from env vars
+├── client.py              # Databricks SDK client factory
+├── tools/                 # MCP tool implementations (43 tools across 13 modules)
+│   ├── __init__.py        # Central registration of all tool modules
+│   ├── sql_executor.py    # SQL execution (1 tool)
+│   ├── table_info.py      # Table metadata (2 tools)
+│   ├── dependency_scanner.py # Scan notebooks/jobs/pipelines (4 tools)
+│   ├── graph_ops.py       # Build/query/refresh dependency graph (3 tools)
+│   ├── impact_analysis.py # Impact analysis (1 tool)
+│   ├── notebook_reviewer.py # Notebook review (1 tool)
+│   ├── job_pipeline_ops.py  # Job & pipeline operations (6 tools)
+│   ├── workspace_listing.py # Workspace listing (1 tool)
+│   ├── workspace_ops.py   # Workspace mutations + read/delete (6 tools)
+│   ├── catalog_ops.py     # Unity Catalog & schema management (5 tools)
+│   ├── compute_ops.py     # Cluster management (5 tools)
+│   ├── warehouse_ops.py   # SQL warehouse management (4 tools)
+│   └── volume_ops.py      # Unity Catalog volumes (4 tools)
+├── parsers/               # Code parsing engines
+│   ├── sql_parser.py      # sqlglot-based SQL extraction
+│   ├── notebook_parser.py # Databricks notebook cell parsing
+│   └── dlt_parser.py      # DLT pipeline definition parsing
+├── graph/                 # Dependency graph
+│   ├── models.py          # Node, Edge, DependencyGraph data models
+│   ├── builder.py         # Graph builder (orchestrates scans)
+│   └── cache.py           # In-memory graph cache with TTL
+└── reviewers/             # Notebook review rule engines
+    ├── performance.py     # Performance anti-patterns
+    ├── standards.py       # Coding standards checks
+    └── suggestions.py     # Optimization suggestions
 ```
 
 ## License

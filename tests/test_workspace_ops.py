@@ -48,6 +48,9 @@ class TestToolRegistration:
         assert "create_job" in names
         assert "create_notebook" in names
         assert "workspace_upload" in names
+        assert "read_notebook" in names
+        assert "delete_workspace_item" in names
+        assert "get_workspace_status" in names
 
 
 # ------------------------------------------------------------------

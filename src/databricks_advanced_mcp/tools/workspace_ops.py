@@ -279,3 +279,127 @@ def register(mcp: FastMCP) -> None:
             }, indent=2)
         except Exception as e:
             return json.dumps({"error": f"Failed to upload file: {e}"})
+
+    @mcp.tool()
+    def read_notebook(
+        notebook_path: str,
+        format: str = "SOURCE",
+    ) -> str:
+        """Read/export the content of a Databricks notebook.
+
+        Args:
+            notebook_path: Workspace path to the notebook
+                           (e.g. "/Workspace/Users/me/my_notebook").
+            format: Export format — "SOURCE" (default) or "HTML".
+
+        Returns:
+            JSON with notebook content and metadata.
+        """
+        import base64 as b64
+
+        from databricks.sdk.service.workspace import ExportFormat
+
+        valid_formats = {"SOURCE", "HTML"}
+        fmt_upper = format.upper()
+        if fmt_upper not in valid_formats:
+            return json.dumps({
+                "error": f"Invalid format '{format}'. Use one of: {', '.join(sorted(valid_formats))}."
+            })
+
+        client = get_workspace_client()
+
+        try:
+            export = client.workspace.export(
+                notebook_path,
+                format=ExportFormat[fmt_upper],
+            )
+        except Exception as e:
+            return json.dumps({"error": f"Failed to export notebook: {e}"})
+
+        content = export.content or ""
+        if content:
+            try:
+                content = b64.b64decode(content).decode("utf-8")
+            except Exception:
+                pass  # Return raw if decode fails
+
+        return json.dumps({
+            "notebook_path": notebook_path,
+            "format": fmt_upper,
+            "content_length": len(content),
+            "content": content,
+        }, indent=2)
+
+    @mcp.tool()
+    def delete_workspace_item(
+        path: str,
+        recursive: bool = False,
+        confirm: bool = False,
+    ) -> str:
+        """Delete a notebook, file, or folder from the Databricks workspace.
+
+        This is a DESTRUCTIVE operation. When confirm=False (default),
+        returns a preview. Set confirm=True to delete.
+
+        Args:
+            path: Workspace path to the object to delete.
+            recursive: If True and path is a directory, delete all contents
+                       recursively. Required for non-empty directories.
+            confirm: Set to True to actually delete.
+
+        Returns:
+            JSON with deletion preview or result.
+        """
+        if not confirm:
+            return json.dumps({
+                "action": "preview",
+                "message": f"Would DELETE workspace item at '{path}'"
+                           + (" (recursive)" if recursive else "") + ".",
+                "delete_config": {
+                    "path": path,
+                    "recursive": recursive,
+                },
+                "warning": "⚠ DESTRUCTIVE: Set confirm=True to actually delete.",
+            }, indent=2)
+
+        client = get_workspace_client()
+
+        try:
+            client.workspace.delete(path, recursive=recursive)
+            return json.dumps({
+                "action": "deleted",
+                "path": path,
+                "recursive": recursive,
+                "status": "workspace item deleted",
+            }, indent=2)
+        except Exception as e:
+            return json.dumps({"error": f"Failed to delete '{path}': {e}"})
+
+    @mcp.tool()
+    def get_workspace_status(path: str) -> str:
+        """Get metadata for a workspace object (notebook, directory, file, etc.).
+
+        Args:
+            path: Workspace path to the object (e.g. "/Workspace/Users/me/my_notebook").
+
+        Returns:
+            JSON with object type, language, path, and modification time.
+        """
+        client = get_workspace_client()
+
+        try:
+            status = client.workspace.get_status(path)
+        except Exception as e:
+            return json.dumps({"error": f"Failed to get status for '{path}': {e}"})
+
+        result: dict[str, Any] = {
+            "path": status.path or path,
+            "object_type": str(status.object_type) if status.object_type else "UNKNOWN",
+            "object_id": status.object_id,
+            "language": str(status.language) if status.language else None,
+            "created_at": str(status.created_at) if status.created_at else None,
+            "modified_at": str(status.modified_at) if status.modified_at else None,
+            "size": status.size if status.size else None,
+        }
+
+        return json.dumps(result, indent=2)
